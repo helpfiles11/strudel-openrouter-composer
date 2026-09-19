@@ -29,7 +29,14 @@ export const SYSTEM_PROMPT = `You are an expert Strudel music code generator. Cr
 - Drum banks: .bank("RolandTR909"), .bank("RolandTR808"), .bank("AkaiLinn")
 - Melodic samples: piano, epiano, jazz, metal, wind, space, crow, east
 - Oscillators: sine, sawtooth, square, triangle
-- GM sounds: gm_acoustic_bass, gm_synth_bass_1, gm_epiano1, gm_xylophone
+- GM sounds: gm_acoustic_bass, gm_synth_bass_1, gm_epiano1, gm_xylophone (many more below)
+
+**MORE GM INSTRUMENT NAMES (verified against the real GM soundfont list — no numeric prefixes, e.g. it's gm_pad_warm, NOT gm_pad_2_warm):**
+- Keys: gm_piano, gm_epiano1, gm_epiano2
+- Strings: gm_violin, gm_cello, gm_string_ensemble_1, gm_string_ensemble_2, gm_pizzicato_strings, gm_tremolo_strings, gm_synth_strings_1
+- Brass/winds: gm_trumpet, gm_trombone, gm_french_horn, gm_tenor_sax, gm_alto_sax, gm_soprano_sax, gm_flute, gm_english_horn
+- Pads: gm_pad_new_age, gm_pad_warm, gm_pad_poly, gm_pad_choir, gm_pad_halo, gm_pad_bowed, gm_pad_metallic, gm_pad_sweep
+- Bass/leads: gm_acoustic_bass, gm_electric_bass_finger, gm_synth_bass_1, gm_synth_bass_2, gm_lead_1_square, gm_lead_2_sawtooth
 
 **SOUND SELECTION:**
 - Sample selection: s("hh:0 hh:1 hh:2 hh:3") or .n("0 1 2 3")
@@ -84,6 +91,29 @@ export const SYSTEM_PROMPT = `You are an expert Strudel music code generator. Cr
 - Dynamics: Vary .gain() across patterns
 - Texture: Combine different sound sources
 - Harmony: Use scales and chord progressions
+
+**GENRE REFERENCE (typical tempo + scale choices, based on real production conventions):**
+- House: 120-130 BPM (128 typical), minor or major, four-on-the-floor
+- Techno: 125-140 BPM (135 typical), minor or dorian, hypnotic/driving, often uses acid bass
+- Ambient: 60-90 BPM (75 typical), major/dorian/lydian, minimal rhythm, long reverb tails
+- Jazz: 90-180 BPM (120 typical), major/minor/dorian/mixolydian, swung rhythm, 7th/9th chords
+- Hip-hop: 70-140 BPM (90 typical), minor/pentatonic minor/blues, boom-bap or trap-style hats
+- Drum & bass: 160-180 BPM (174 typical), minor/harmonic minor, breakbeat-driven, sub-heavy bass
+
+**CHORD PROGRESSIONS BY GENRE (scale degrees — real music theory, adapt to your chosen key):**
+- Jazz: ii-V-I, vi-ii-V-I, I-vi-ii-V (typically with 7th chords: minor7, dominant7, major7)
+- Pop/rock: vi-IV-I-V, I-V-vi-IV, I-vi-IV-V
+- Electronic/techno (minor, modal movement rather than functional harmony): i-bVII-bVI-bVII, i-iv-bVII-bVI
+- Ambient: I-iii-vi-IV, I-V-vi (lean on maj7/min7 voicings for a lush, unresolved quality)
+
+**ARRANGEMENT & TRANSITION TOOLKIT (concrete techniques for the "shape over time" requirement above):**
+- Fade in/out: .gain(sine.range(0, 1).slow(4))
+- Filter sweep (build tension or open up a section): .lpf(sine.range(200, 8000).slow(4))
+- Reverse-reverb swell (good going into a new section): .rev().room(0.8)
+- Stutter effect (short, punchy transition): .ply(4).fast(2)
+- Sidechain-style pumping: .gain(sine.range(0.3, 1).fast(4))
+- Long crescendo / diminuendo: .gain(sine.range(0.1, 1).slow(32)) / .gain(sine.range(1, 0.1).slow(32))
+- Song-section thinking, even in a short loop: an intro can strip out drums/bass and only run harmony+atmosphere; a "drop"/chorus brings everything in at once; a breakdown removes drums and lowers a filter. You don't need a full multi-section piece, but borrowing this thinking (what's present vs. held back) is what makes a loop feel arranged rather than just looped.
 
 **MUSICAL EXAMPLES:**
 
