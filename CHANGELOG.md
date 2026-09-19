@@ -24,9 +24,29 @@ These were all found by actually running the app end-to-end and verifying agains
 - **An OpenRouter request could throw a raw, unwrapped `DOMException`** if the response body was still arriving when the timeout fired (`fetch()` resolves on headers, not body) — now wrapped consistently into a clear error message.
 - **A free "reasoning" model could exhaust its entire token budget on internal chain-of-thought** and return empty content with no error — now detected and reported explicitly, with a higher token budget and lower reasoning effort requested by default.
 
+- **A status race hid real errors behind a false "success."** Strudel's `evaluate()` dispatches its `update` event (with any error already set) *before* our own `await evaluate()` resolves - code right after that await was unconditionally writing a "success" status, silently overwriting the real error the event had just reported. Fixed by routing all success/error status text through a single handler driven by that event, ignoring mid-flight (`pending: true`) events that can carry a stale result from the *previous* evaluation.
+- **A response cut off by the token limit could leak a raw, unclosed code fence into the editor**, breaking as invalid JS ("Unterminated template"). `postProcessStrudelCode()` now strips a dangling opening fence even when no closing fence ever arrived.
+- **Two more real mini-notation/JS syntax traps**, found by actually listening to generated tracks and one failing outright:
+  - A model can write a pattern string with a raw line break inside `"..."`/`'...'` (e.g. for readability) - only backtick strings allow embedded newlines, so this is invalid JavaScript and silently breaks the *entire* track, not just that line.
+  - `|` (Strudel's "randomly pick one of these sequences each cycle" operator) is only valid inside `[...]` or at a pattern's top level - verified directly against Strudel's own grammar (`packages/mini/krill.pegjs`). A model can place it directly inside `<...>`, which throws `[mini] parse error ... but "|" found` and fails the whole track. Both are now called out explicitly in the system prompt, with defensive auto-fixes in `postProcessStrudelCode()` for when a model still gets them wrong.
+- **A compounding `.slow()`/`.fast()` bug that reads as a "static, unevolving" track rather than a crash**: applying `.slow(4)` once when defining a pattern and *again* when using it multiplies rather than adds (16x slower, not 4x) - one generated ambient track had a bassline that, doing the math, held each note for about a minute before changing. Now called out explicitly in the musicality guidelines.
+
+## Dynamic instrument/genre-aware generation
+
+The repo had several data modules (`synthesis_presets.js`'s realistic instrument presets, `sounds.js`/`expanded_sounds.js`'s genre sound palettes, `patterns.js`'s pattern templates) that were only reachable through browsing-only API endpoints the frontend never called - the same "built but never wired up" pattern as the removed musical intelligence pipeline, just smaller in scope. Added `backend/prompt_context.js`, which detects instruments and genres actually mentioned in a user's prompt and injects matching real data into *that specific request's* system prompt (via a new `buildSystemPrompt()` in `strudel_prompt.js`) - a generic prompt that mentions nothing specific still gets the exact unmodified base prompt.
+
+Building this surfaced a much bigger problem: **`synthesis_presets.js` and `expanded_sounds.js`'s VCSL/melodic sample documentation were substantially fabricated.** Checked every claimed sample name (`violin`, `cello`, `trumpet`, `saxophone`, `guitar_electric`, `sitar`, `gamelan`, `koto`, `piano_grand`, bare `bass`/`subbass`, and more) against every sample source Strudel actually loads (`vcsl.json`, `Dirt-Samples.json`, `tidal-drum-machines.json`, `mridangam.json`, `piano.json`) - none of those names exist in any of them. Rewrote both files to use real GM soundfont voices instead (`gm_violin`, `gm_cello`, `gm_trumpet`, `gm_tenor_sax`, `gm_acoustic_guitar_steel`, `gm_sitar`, `gm_koto`, etc.), each individually verified against the real GM instrument list before being used. `didgeridoo` was the one sample name that turned out to be genuinely real.
+
+Also fixed while touching these modules:
+- `sounds.js`: `isValidSound()`/`getSoundsByCategory('synth')` referenced an undefined `SYNTH_WAVEFORMS`, and `ALL_SOUNDS` was built by spreading arrays into an object literal (producing numeric-index keys, not sound-name keys) - both threw or silently returned wrong data whenever called.
+- `patterns.js`: `getPatternsByGenre()`'s `COMPLETE_PATTERNS` branch compared an array to a string with `===`, which is never true - that half of the function was always silently empty.
+- Inconsistent genre-key spelling across files (`hiphop` vs `hip-hop`) unified to `hip_hop`, and a missing `drum_and_bass` entry added where it was absent.
+- Removed several dead exports found to have zero callers anywhere in the live codebase (`getPresetCode`, `isValidDrumMachine`, `isValidMelodicSample`, `DRUM_BANKS`, a duplicate `getSoundsByCategory`, two redundant `export default` blocks).
+
 ## Cleanup
 
 - Removed a large, unused "musical intelligence" pipeline (`claude_enhanced.js` and its dependents) that the frontend never actually called, plus stale planning docs and throwaway test files
 - Simplified the Claude response parser: replaced a ~130-line heuristic line-scanner with a straightforward fenced-code-block extraction
 - Removed a duplicate "Generate" button and fixed status messages that were overwriting real errors with a false "success"
+- Removed unused Prism.js includes from the frontend - nothing ever called `Prism.highlightElement()`, generated code goes straight into the Strudel editor
 - Added a `LICENSE` file (AGPL-3.0-or-later, matching Strudel's own license) — the license was referenced in the README but the file itself was missing

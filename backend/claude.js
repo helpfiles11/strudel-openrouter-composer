@@ -3,7 +3,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { SYSTEM_PROMPT, postProcessStrudelCode } from './strudel_prompt.js';
+import { buildSystemPrompt, postProcessStrudelCode } from './strudel_prompt.js';
 
 // Set up __dirname equivalent for ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -31,7 +31,7 @@ export async function generateStrudelCode(prompt) {
     const response = await client.messages.create({
       model: CLAUDE_MODEL,
       max_tokens: 2000,
-      system: SYSTEM_PROMPT,
+      system: buildSystemPrompt(prompt),
       messages: [
         { role: "user", content: `User request: ${prompt}` }
       ],

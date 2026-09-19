@@ -103,183 +103,164 @@ const DRUM_MACHINES = {
   }
 };
 
-// VCSL INSTRUMENT SAMPLES (Versilian Community Sample Library)
+// VCSL INSTRUMENT SAMPLES (Versilian Community Sample Library).
+// Every key below verified against the real vcsl.json sample manifest that
+// Strudel actually loads (packages/repl/prebake.mjs -> dough-samples/vcsl.json).
+// The previous version of this list (violin, cello, trumpet, saxophone,
+// guitar_electric, sitar, gamelan, koto, etc.) did not match VCSL's real
+// contents at all - none of those sample names exist in the loaded set, so
+// every entry here was replaced with what VCSL actually provides.
 const VCSL_INSTRUMENTS = {
-  // Percussion from VCSL
-  ballwhistle: 'Ball whistle percussion',
-  bassdrum1: 'Concert bass drum 1',
-  bassdrum2: 'Concert bass drum 2',
+  // Percussion
   bongo: 'Bongo drums',
   conga: 'Conga drums',
   darbuka: 'Middle Eastern darbuka',
   framedrum: 'Frame drum',
-  snare_modern: 'Modern snare drum',
-  snare_hi: 'High-tuned snare',
-  snare_low: 'Low-tuned snare',
-  snare_rim: 'Snare rim shot',
+  cajon: 'Cajon',
+  cowbell: 'Cowbell',
+  tambourine: 'Tambourine',
+  woodblock: 'Woodblock',
   timpani: 'Orchestral timpani',
   timpani_roll: 'Timpani roll',
-  timpani2: 'Second timpani',
+  snare_modern: 'Modern snare drum',
+  snare_rim: 'Snare rim shot',
   tom_mallet: 'Tom with mallet',
   tom_stick: 'Tom with stick',
-  tom_rim: 'Tom rim shot',
-  tom2_mallet: 'Second tom with mallet',
-  tom2_stick: 'Second tom with stick',
-  tom2_rim: 'Second tom rim shot',
-  
-  // String Instruments
-  violin: 'Violin samples',
-  viola: 'Viola samples',
-  cello: 'Cello samples',
-  doublebass: 'Double bass samples',
-  guitar_acoustic: 'Acoustic guitar',
-  guitar_electric: 'Electric guitar',
-  guitar_nylon: 'Nylon string guitar',
-  
-  // Brass Instruments
-  trumpet: 'Trumpet samples',
-  trombone: 'Trombone samples',
-  horn: 'French horn samples',
-  tuba: 'Tuba samples',
-  
-  // Woodwinds
-  flute: 'Flute samples',
-  clarinet: 'Clarinet samples',
-  oboe: 'Oboe samples',
-  bassoon: 'Bassoon samples',
-  saxophone: 'Saxophone samples',
-  
-  // Piano & Keys
-  piano_grand: 'Grand piano',
-  piano_upright: 'Upright piano',
-  harpsichord: 'Harpsichord',
-  organ: 'Pipe organ',
-  
-  // Ethnic Instruments
-  sitar: 'Indian sitar',
-  tabla_left: 'Tabla left hand',
-  tabla_right: 'Tabla right hand',
-  didgeridoo: 'Australian didgeridoo',
-  gamelan: 'Indonesian gamelan',
-  koto: 'Japanese koto',
-  erhu: 'Chinese erhu'
+
+  // Mallet / tuned percussion
+  marimba: 'Marimba',
+  vibraphone: 'Vibraphone',
+  glockenspiel: 'Glockenspiel',
+  balafon: 'African balafon',
+  kalimba: 'Kalimba (thumb piano)',
+  xylophone_hard_ff: 'Xylophone, hard mallet, loud',
+  tubularbells: 'Tubular bells',
+  handbells: 'Handbells',
+
+  // Winds
+  sax: 'Saxophone',
+  saxello: 'Saxello (curved soprano sax)',
+  recorder_alto_sus: 'Alto recorder, sustained',
+  recorder_bass_sus: 'Bass recorder, sustained',
+  harmonica: 'Harmonica',
+  ocarina: 'Ocarina',
+
+  // Piano & keys
+  piano1: 'Acoustic piano',
+  steinway: 'Steinway grand piano',
+  fmpiano: 'FM electric piano',
+  kawai: 'Kawai electric piano',
+  organ_8inch: 'Pipe organ, 8-inch stop',
+  pipeorgan_loud: 'Pipe organ, loud registration',
+
+  // Plucked & bowed strings (VCSL has no violin/cello family - these are
+  // its actual string-adjacent instruments)
+  harp: 'Concert harp',
+  folkharp: 'Folk harp',
+  psaltery_pluck: 'Plucked psaltery',
+  psaltery_bow: 'Bowed psaltery',
+  strumstick: 'Strumstick (fretted dulcimer)',
+  dantranh: 'Vietnamese monochord zither',
+
+  // World
+  didgeridoo: 'Australian didgeridoo'
 };
 
-// MELODIC SAMPLES (confirmed working in Strudel)
+// MELODIC SAMPLES - confirmed against the actual Dirt-Samples.json/piano.json
+// manifests Strudel loads (same verified set documented in sounds.js). The
+// previous version of this list included many names (rhodes, wurli, pad,
+// string, choir, voice, bass, subbass, lead, arp, pluck, noise, vinyl, tape,
+// glitch, sitar, tabla, gamelan, koto, granular, fm, am, ring) that don't
+// exist in any sample set Strudel actually loads - removed rather than
+// guessing at substitutes. For pads/leads/bass, use the real gm_pad_*/
+// gm_lead_*/gm_synth_bass_* names documented in strudel_prompt.js instead.
 const MELODIC_SAMPLES = {
-  // Piano & Keys
   piano: 'Acoustic piano samples',
   epiano: 'Electric piano',
-  rhodes: 'Rhodes electric piano',
-  wurli: 'Wurlitzer electric piano',
-  
-  // Synthesizers
   space: 'Spacey synthesizer sounds',
   wind: 'Wind synthesizer',
   metal: 'Metallic synthesizer',
   jazz: 'Jazz synthesizer sounds',
-  
-  // Organic Sounds
   crow: 'Crow/bird sounds',
   insect: 'Insect sounds',
   numbers: 'Spoken numbers',
-  
-  // Ambient & Texture
-  pad: 'Synthesizer pads',
-  string: 'String synthesizer',
-  choir: 'Choir sounds',
-  voice: 'Human voice samples',
-  
-  // Bass
-  bass: 'Bass guitar samples',
-  subbass: 'Sub bass sounds',
-  
-  // Leads
-  lead: 'Lead synthesizer',
-  arp: 'Arpeggiated sounds',
-  pluck: 'Plucked sounds',
-  
-  // Effects & Textures
-  noise: 'Noise textures',
-  vinyl: 'Vinyl crackle',
-  tape: 'Tape saturation',
-  glitch: 'Glitch sounds',
-  
-  // World Instruments
-  sitar: 'Indian sitar',
-  tabla: 'Indian tabla',
-  gamelan: 'Indonesian gamelan',
-  koto: 'Japanese koto',
-  didgeridoo: 'Australian didgeridoo',
-  
-  // Experimental
-  granular: 'Granular synthesis',
-  fm: 'FM synthesis sounds',
-  am: 'AM synthesis sounds',
-  ring: 'Ring modulation'
+  casio: 'Casio-style synthesizer sounds'
 };
 
-// COMPREHENSIVE GENRE MAPPING
+// COMPREHENSIVE GENRE MAPPING. `melodic`/`effects` arrays trimmed to only
+// verified-real sample names (see MELODIC_SAMPLES/VCSL_INSTRUMENTS above) -
+// the previous version referenced many names (lead, bass, arp, pad, noise,
+// vinyl, tape, glitch, granular, fm, am, ring, guitar_electric, sitar,
+// gamelan, koto, choir, string, rhodes, pluck) that don't exist in any
+// sample set Strudel loads. Left empty rather than guessing where nothing
+// real substitutes; real GM-based leads/bass/pads are documented in
+// backend/strudel_prompt.js instead.
 const EXPANDED_GENRE_SOUNDS = {
   house: {
     drums: ['bd', 'sd', 'hh', 'oh', 'cp'],
     banks: ['RolandTR909', 'RolandTR808'],
-    melodic: ['piano', 'epiano', 'rhodes', 'bass', 'pad', 'string'],
-    effects: ['vinyl', 'tape']
+    melodic: ['piano', 'epiano'],
+    effects: []
   },
   techno: {
     drums: ['bd', 'sd', 'hh', 'oh', 'cp', 'cy'],
     banks: ['RolandTR909', 'RolandTR808', 'RolandTR707'],
-    melodic: ['lead', 'bass', 'arp', 'noise', 'metal'],
-    effects: ['glitch', 'granular']
+    melodic: ['metal'],
+    effects: []
   },
-  'hip-hop': {
+  hip_hop: {
     drums: ['bd', 'sd', 'hh', 'oh', 'cp'],
     banks: ['RolandTR808', 'MPC60', 'MPC3000', 'EmuSP1200'],
-    melodic: ['piano', 'epiano', 'bass', 'jazz', 'vinyl'],
-    effects: ['vinyl', 'tape']
+    melodic: ['piano', 'epiano', 'jazz'],
+    effects: []
   },
   trap: {
     drums: ['bd', 'sd', 'hh', 'oh', 'cp'],
     banks: ['RolandTR808', 'MPC60'],
-    melodic: ['lead', 'bass', 'pluck', 'pad'],
-    effects: ['glitch', 'tape']
+    melodic: ['piano'],
+    effects: []
   },
   ambient: {
     drums: ['bd', 'sd', 'hh'],
     banks: ['RolandTR909'],
-    melodic: ['space', 'wind', 'pad', 'choir', 'string', 'piano'],
-    effects: ['granular', 'noise']
+    melodic: ['space', 'wind', 'piano'],
+    effects: []
   },
   jazz: {
     drums: ['bd', 'sd', 'hh', 'oh', 'rd', 'cr'],
     banks: ['LinnDrum', 'AlesisHR16'],
-    melodic: ['piano', 'epiano', 'rhodes', 'bass', 'jazz'],
-    effects: ['vinyl', 'tape']
+    melodic: ['piano', 'epiano', 'jazz'],
+    effects: []
   },
   rock: {
     drums: ['bd', 'sd', 'hh', 'oh', 'cr', 'rd'],
     banks: ['LinnDrum', 'AlesisHR16', 'BossDR110'],
-    melodic: ['guitar_electric', 'bass', 'piano'],
-    effects: ['tape']
+    melodic: ['piano'],
+    effects: []
+  },
+  drum_and_bass: {
+    drums: ['bd', 'sd', 'hh', 'cp'],
+    banks: ['RolandTR909', 'RolandTR808'],
+    melodic: ['metal'],
+    effects: []
   },
   electronic: {
     drums: ['bd', 'sd', 'hh', 'oh', 'cp', 'cy'],
     banks: ['RolandTR909', 'RolandTR808', 'RolandTR707'],
-    melodic: ['lead', 'bass', 'arp', 'pad', 'space', 'metal'],
-    effects: ['glitch', 'granular', 'fm', 'am']
+    melodic: ['space', 'metal'],
+    effects: []
   },
   world: {
-    drums: ['tabla', 'bongo', 'conga', 'djembe'],
+    drums: ['bongo', 'conga', 'darbuka', 'framedrum'],
     banks: ['RolandTR707'],
-    melodic: ['sitar', 'gamelan', 'koto', 'didgeridoo'],
-    effects: ['granular']
+    melodic: ['didgeridoo'],
+    effects: []
   },
   experimental: {
     drums: ['bd', 'sd', 'hh', 'perc'],
     banks: ['OberheimDMX', 'EmuSP12'],
-    melodic: ['noise', 'granular', 'glitch', 'fm', 'am', 'ring'],
-    effects: ['glitch', 'granular', 'ring']
+    melodic: [],
+    effects: []
   }
 };
 
@@ -320,15 +301,6 @@ function getRandomSoundsForGenre(genre, count = 5) {
   return shuffled.slice(0, count);
 }
 
-function isValidDrumMachine(bank) {
-  return Object.keys(DRUM_MACHINES).includes(bank);
-}
-
-function isValidMelodicSample(sample) {
-  return Object.keys(MELODIC_SAMPLES).includes(sample) || 
-         Object.keys(VCSL_INSTRUMENTS).includes(sample);
-}
-
 // COMPREHENSIVE SOUND LIBRARY EXPORT
 const COMPREHENSIVE_SOUND_LIBRARY = {
   drumMachines: DRUM_MACHINES,
@@ -367,9 +339,5 @@ export {
   getDrumMachinesByGenre,
   getSoundsForGenre,
   getRandomSoundsForGenre,
-  isValidDrumMachine,
-  isValidMelodicSample,
   COMPREHENSIVE_SOUND_LIBRARY
 };
-
-export default COMPREHENSIVE_SOUND_LIBRARY;

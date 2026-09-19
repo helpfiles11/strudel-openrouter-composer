@@ -4,7 +4,7 @@
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { SYSTEM_PROMPT, postProcessStrudelCode } from './strudel_prompt.js';
+import { buildSystemPrompt, postProcessStrudelCode } from './strudel_prompt.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -67,7 +67,7 @@ export async function generateStrudelCode(prompt) {
           max_tokens: MAX_TOKENS,
           reasoning: { effort: 'low' },
           messages: [
-            { role: 'system', content: SYSTEM_PROMPT },
+            { role: 'system', content: buildSystemPrompt(prompt) },
             { role: 'user', content: `User request: ${prompt}` },
           ],
         }),

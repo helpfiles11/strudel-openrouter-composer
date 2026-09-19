@@ -65,7 +65,7 @@ stack(
   s("~ ~ ~ <~ ~ oh ~>").bank("RolandTR808").gain(0.4)
 )`,
     description: 'Classic hip-hop pattern with TR-808',
-    genre: ['hiphop', 'trap'],
+    genre: ['hip_hop', 'trap'],
     tempo: 90
   },
   
@@ -78,7 +78,7 @@ stack(
   s("~ ~ ~ [oh ~ cp ~]").bank("RolandTR808").gain(0.5)
 )`,
     description: 'Modern trap pattern with dynamic hi-hats',
-    genre: ['trap', 'hiphop'],
+    genre: ['trap', 'hip_hop'],
     tempo: 140
   },
 
@@ -128,7 +128,7 @@ export const MELODIC_PATTERNS = {
   hiphopBass: {
     pattern: `s("gm_synth_bass_1").n("[0 ~ 3 5]").scale("C2:minor").lpf(300).gain(0.8)`,
     description: 'Hip-hop bass with subdivision',
-    genre: ['hiphop', 'trap']
+    genre: ['hip_hop', 'trap']
   },
   
   jazzBass: {
@@ -152,13 +152,13 @@ export const MELODIC_PATTERNS = {
 
   // Pad patterns
   ambientPad: {
-    pattern: `s("gm_pad_1_new_age").n("<c3 f3 g3 bb3>").scale("C3:minor").slow(4).room(0.8).gain(sine.range(0.3, 0.6))`,
+    pattern: `s("gm_pad_new_age").n("<c3 f3 g3 bb3>").scale("C3:minor").slow(4).room(0.8).gain(sine.range(0.3, 0.6))`,
     description: 'Ambient pad with dynamic volume',
     genre: ['ambient', 'chillout']
   },
   
   housePad: {
-    pattern: `s("gm_pad_2_warm").n("<c4 e4 g4>*2").scale("C4:major").room(0.5).lpf(2000).gain(0.4)`,
+    pattern: `s("gm_pad_warm").n("<c4 e4 g4>*2").scale("C4:major").room(0.5).lpf(2000).gain(0.4)`,
     description: 'House pad with warmth',
     genre: ['house', 'deep house']
   },
@@ -200,7 +200,7 @@ stack(
   s("gm_lead_2_sawtooth").n("<c4 eb4 g4 bb4>").scale("C4:minor").lpf(perlin.range(1000, 4000)).gain(0.6).delay(0.125),
   
   // Pad
-  s("gm_pad_2_warm").n("<c4 e4 g4>*2").scale("C4:major").room(0.5).lpf(2000).gain(0.4)
+  s("gm_pad_warm").n("<c4 e4 g4>*2").scale("C4:major").room(0.5).lpf(2000).gain(0.4)
 )`,
     description: 'Complete modern house track',
     genre: ['house'],
@@ -238,7 +238,7 @@ stack(
   s("bd ~ ~ ~").bank("ViscoSpaceDrum").gain(0.4).room(0.9).slow(2),
   
   // Evolving pad
-  s("gm_pad_1_new_age").n("<c3 f3 g3 bb3>").scale("C3:minor").slow(4).room(0.8).gain(sine.range(0.3, 0.6)),
+  s("gm_pad_new_age").n("<c3 f3 g3 bb3>").scale("C3:minor").slow(4).room(0.8).gain(sine.range(0.3, 0.6)),
   
   // Floating melody
   s("gm_xylophone").n("c5*4").scale("C5:pentatonic").gain(0.6).delay(0.375).room(0.6),
@@ -256,50 +256,30 @@ stack(
 // Pattern utilities
 export function getPatternsByGenre(genre) {
   const patterns = {};
-  
+
   // Add rhythm patterns
   Object.entries(RHYTHM_PATTERNS).forEach(([key, pattern]) => {
     if (pattern.genre.includes(genre)) {
       patterns[`rhythm_${key}`] = pattern;
     }
   });
-  
-  // Add complete patterns
+
+  // Add melodic patterns (bass/lead/pad lines)
+  Object.entries(MELODIC_PATTERNS).forEach(([key, pattern]) => {
+    if (pattern.genre.includes(genre)) {
+      patterns[`melodic_${key}`] = pattern;
+    }
+  });
+
+  // Add complete patterns. COMPLETE_PATTERNS entries store `genre` as an
+  // array (e.g. ['house']) like the two loops above, not a plain string, so
+  // this must use .includes() too - a previous `pattern.genre === genre`
+  // comparison here always failed since an array is never === a string.
   Object.entries(COMPLETE_PATTERNS).forEach(([key, pattern]) => {
-    if (pattern.genre === genre) {
+    if (pattern.genre.includes(genre)) {
       patterns[`complete_${key}`] = pattern;
     }
   });
-  
+
   return patterns;
-}
-
-export function getPatternsByComplexity(complexity) {
-  return Object.entries(COMPLETE_PATTERNS)
-    .filter(([_, pattern]) => pattern.complexity === complexity)
-    .reduce((acc, [key, pattern]) => {
-      acc[key] = pattern;
-      return acc;
-    }, {});
-}
-
-export function combinePatterns(rhythmKey, melodicKey, effects = []) {
-  const rhythm = RHYTHM_PATTERNS[rhythmKey];
-  const melodic = MELODIC_PATTERNS[melodicKey];
-  
-  if (!rhythm || !melodic) return null;
-  
-  let combined = `stack(${rhythm.pattern}, ${melodic.pattern}.sound("piano"))`;
-  
-  // Apply effects
-  effects.forEach(effect => {
-    if (EFFECT_PATTERNS[effect]) {
-      const effectParams = EFFECT_PATTERNS[effect];
-      Object.entries(effectParams).forEach(([param, value]) => {
-        combined += `.${param}(${value})`;
-      });
-    }
-  });
-  
-  return combined;
 }

@@ -2,6 +2,7 @@
 // every provider (backend/claude.js, backend/openrouter.js, ...). Keeping this
 // in one place means a fix (e.g. correcting .degrade() syntax) benefits every
 // provider automatically, instead of drifting across per-provider copies.
+import { buildPromptAddendum } from './prompt_context.js';
 
 export const SYSTEM_PROMPT = `You are an expert Strudel music code generator. Create sophisticated, musical compositions using the full power of Strudel.
 
@@ -33,10 +34,12 @@ export const SYSTEM_PROMPT = `You are an expert Strudel music code generator. Cr
 
 **MORE GM INSTRUMENT NAMES (verified against the real GM soundfont list — no numeric prefixes, e.g. it's gm_pad_warm, NOT gm_pad_2_warm):**
 - Keys: gm_piano, gm_epiano1, gm_epiano2
-- Strings: gm_violin, gm_cello, gm_string_ensemble_1, gm_string_ensemble_2, gm_pizzicato_strings, gm_tremolo_strings, gm_synth_strings_1
-- Brass/winds: gm_trumpet, gm_trombone, gm_french_horn, gm_tenor_sax, gm_alto_sax, gm_soprano_sax, gm_flute, gm_english_horn
+- Guitar: gm_acoustic_guitar_nylon, gm_acoustic_guitar_steel, gm_electric_guitar_clean, gm_overdriven_guitar, gm_distortion_guitar
+- Strings: gm_violin, gm_viola, gm_cello, gm_contrabass, gm_string_ensemble_1, gm_string_ensemble_2, gm_pizzicato_strings, gm_tremolo_strings, gm_synth_strings_1
+- Brass/winds: gm_trumpet, gm_trombone, gm_french_horn, gm_tenor_sax, gm_alto_sax, gm_soprano_sax, gm_flute, gm_clarinet, gm_oboe, gm_english_horn
 - Pads: gm_pad_new_age, gm_pad_warm, gm_pad_poly, gm_pad_choir, gm_pad_halo, gm_pad_bowed, gm_pad_metallic, gm_pad_sweep
 - Bass/leads: gm_acoustic_bass, gm_electric_bass_finger, gm_synth_bass_1, gm_synth_bass_2, gm_lead_1_square, gm_lead_2_sawtooth
+- World: gm_sitar, gm_koto, gm_kalimba, gm_banjo, gm_shamisen, gm_bagpipe
 
 **SOUND SELECTION:**
 - Sample selection: s("hh:0 hh:1 hh:2 hh:3") or .n("0 1 2 3")
@@ -146,6 +149,7 @@ $: s("~ hh ~ hh").gain(0.5).swing(0.2)
 - **Give it a shape over time, not a static loop.** Real tracks breathe: introduce layers gradually (e.g. drums first, then bass, then lead), use .every()/.sometimes() for occasional variation, and consider a slow filter sweep or gain automation across the cycle so it doesn't sound identical forever. A track that's still exactly the same after 30 seconds feels lifeless even if each individual line is fine.
 - **Rhythm needs a pocket.** Don't put every layer on the same subdivision (e.g. everything at *8) — vary note density between layers (sparse bass, medium chords, busier hats) so there's a rhythmic hierarchy instead of everything competing for the same beat.
 - **Fewer, better layers beats many competing ones.** 3-5 well-balanced layers (drums, bass, one harmonic layer, one melodic/lead layer, maybe one atmospheric layer) usually sounds better than 8 layers all fighting for attention.
+- **Watch for compounding .slow()/.fast() calls.** If you already call .slow(n) when defining a pattern (e.g. \`const bassNotes = "<c2 f2 g2>".slow(4)\`), do NOT call .slow() again when using that same pattern in a \$: block — the two multiply together (slow(4) + slow(4) = 16x slower, not 4x), and can silently stretch a bassline to take minutes to complete one cycle instead of the ~15-40 seconds it should feel like, making the track sound static/stuck even though it is "technically" evolving. Apply .slow()/.fast() to a given pattern only once, at whichever point makes the total duration reasonable for the tempo.
 
 **OUTPUT REQUIREMENTS:**
 1. Create musically coherent compositions — follow the musicality guidelines above, not just valid syntax
@@ -160,7 +164,44 @@ Respond with ONLY a single fenced code block (\`\`\`javascript ... \`\`\`) conta
 Do not write any explanation, preamble, or commentary before or after the code block. If you want to
 explain a choice, put it in a \`//\` comment inside the code.
 
+**CRITICAL SYNTAX RULE: never write a multi-line pattern string with " or '.** A mini-notation
+pattern like note("...") or s("...") MUST stay on a single line - a raw line break inside a
+"..." or '...' string is invalid JavaScript and will make the ENTIRE track fail to run, even if
+every other line is correct. If a pattern is long, either keep it on one line (mini-notation
+ignores extra spaces) or use backticks (\`...\`) instead, which do allow line breaks. Example of
+what NOT to do:
+\`\`\`
+note("
+  [c3 e3 g3]
+  [d3 f3 a3]
+")
+\`\`\`
+Instead write: note("[c3 e3 g3] [d3 f3 a3]") all on one line.
+
+**CRITICAL SYNTAX RULE: never put "|" directly inside <...>.** The "|" operator (randomly pick
+ONE of these sequences each cycle) is only valid inside [...] brackets or at the very top level
+of a pattern string - it is NOT valid directly inside angle brackets, and using it there throws
+a parse error that fails the whole track. Wrong: note("<a3 b3 | c3 d3>"). If you want several
+bars to play one after another (not randomly), just write them as a normal sequence instead:
+note("<[a3 b3] [c3 d3] [e3 f3]>") - each bracketed group plays in its own cycle automatically,
+no "|" needed. Only use "|" for genuine per-cycle randomization, and only inside [...] or at the
+top level, e.g. note("[a3 b3] | [c3 d3]").
+
 Generate sophisticated Strudel code that showcases the full capabilities of the system!`;
+
+/**
+ * Builds the full system prompt for one request: the base SYSTEM_PROMPT plus
+ * a per-request addendum of real, verified data (instrument presets, genre
+ * sound palettes, pattern templates) when the user's prompt actually mentions
+ * something specific. A generic prompt gets an empty addendum, so behavior
+ * is unchanged from the plain SYSTEM_PROMPT in that case.
+ * @param {string} prompt - User's natural language description
+ * @returns {string} - Full system prompt to send to the model
+ */
+export function buildSystemPrompt(prompt) {
+  const addendum = buildPromptAddendum(prompt);
+  return addendum ? `${SYSTEM_PROMPT}\n\n${addendum}` : SYSTEM_PROMPT;
+}
 
 /**
  * Extracts and cleans up a model's raw response into playable Strudel code.
@@ -185,6 +226,35 @@ export function postProcessStrudelCode(code) {
     result = code.replace(/^```(?:javascript|js)?\s*\n?/, '');
   }
   result = result.trim();
+
+  // Fix known mini-notation mistakes inside note(/n(/s(/sound( pattern
+  // strings specifically (not every quoted string in the file, so this can't
+  // accidentally mangle an apostrophe inside a // comment elsewhere).
+  result = result.replace(
+    /\b(note|n|s|sound)\(\s*(["'])((?:(?!\2)[\s\S])*?)\2/g,
+    (match, fn, quote, inner) => {
+      let fixed = inner;
+
+      // A raw line break inside "..."/'...' (e.g. for readability) is
+      // invalid JavaScript - only backtick strings allow embedded newlines -
+      // and breaks the ENTIRE track, not just that line.
+      if (fixed.includes('\n')) {
+        fixed = fixed.replace(/\s*\n\s*/g, ' ').trim();
+      }
+
+      // '|' (Strudel's "randomly pick one of these sequences each cycle"
+      // operator) is only valid inside [...] or at the pattern's top level -
+      // verified against the real grammar (packages/mini/krill.pegjs:
+      // <...> resolves to polymeter_stack, which only accepts comma-
+      // separated stacking, not pipe). A '|' placed directly inside <...>
+      // throws "[mini] parse error ... but '|' found" and the whole track
+      // fails to evaluate. Defensively convert it to a plain space
+      // (sequential) inside any <...> span, rather than leave it unparseable.
+      fixed = fixed.replace(/<[^<>]*>/g, span => span.replace(/\|/g, ' '));
+
+      return fixed === inner ? match : `${fn}(${quote}${fixed}${quote}`;
+    }
+  );
 
   // Fix known-incorrect API usage that models occasionally produce. Strudel's
   // control names are mostly lowercase-only (confirmed against @strudel/core

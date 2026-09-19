@@ -44,17 +44,6 @@ export const DRUM_SAMPLES = {
   tick: 'Tick sounds'
 };
 
-// DRUM BANKS - Confirmed working drum machines
-export const DRUM_BANKS = {
-  RolandTR909: 'Classic house/techno drum machine',
-  RolandTR808: 'Hip-hop/trap drum machine', 
-  RolandTR707: 'Vintage electronic drums',
-  AkaiLinn: 'Classic Linn drum machine',
-  RhythmAce: 'Vintage rhythm machine',
-  ViscoSpaceDrum: 'Experimental drum sounds',
-  CasioRZ1: 'Sampling drum machine'
-};
-
 // MELODIC SAMPLES - Confirmed working melodic sounds
 export const MELODIC_SAMPLES = [
   // Confirmed working melodic samples
@@ -70,38 +59,35 @@ export const MELODIC_SAMPLES = [
 export const GM_SOUNDS = [
   // Bass sounds (confirmed working)
   'gm_acoustic_bass',
-  'gm_synth_bass_1', 
+  'gm_synth_bass_1',
   'gm_synth_bass_2',
-  
+
   // Lead sounds (confirmed working)
   'gm_lead_1_square',
   'gm_lead_2_sawtooth',
-  
+
   // Piano/Keys (confirmed working)
   'gm_epiano1',
   'gm_xylophone'
-  
-  // NOTE: GM pad sounds (gm_pad_*) are NOT available in web Strudel
-  // Use synthesis (triangle, square, sine) with effects instead
+
+  // NOTE: GM pad sounds DO exist (verified against the real GM soundfont
+  // source, packages/soundfonts/gm.mjs) but WITHOUT a numeric prefix, e.g.
+  // gm_pad_warm, NOT gm_pad_2_warm. See GENRE_SOUNDS below for real examples.
 ];
 
-// Combine all sounds for validation
+// Oscillator waveforms registered by Strudel's synth engine (verified against
+// packages/superdough/synth.mjs's registerSynthSounds()).
+export const SYNTH_WAVEFORMS = ['sine', 'sawtooth', 'square', 'triangle'];
+
+// Combine all sounds for validation. MELODIC_SAMPLES/GM_SOUNDS are arrays, so
+// they're converted to name->name entries here rather than spread directly
+// (spreading an array into an object literal produces numeric-index keys,
+// not the sound-name keys this map and /api/sounds's consumers need).
 export const ALL_SOUNDS = {
   ...DRUM_SAMPLES,
-  ...MELODIC_SAMPLES,
-  ...GM_SOUNDS
+  ...Object.fromEntries(MELODIC_SAMPLES.map(name => [name, name])),
+  ...Object.fromEntries(GM_SOUNDS.map(name => [name, name]))
 };
-
-// Get sounds by category
-export function getSoundsByCategory(category) {
-  switch(category) {
-    case 'drums': return DRUM_SAMPLES;
-    case 'melodic': return MELODIC_SAMPLES;
-    case 'gm': return GM_SOUNDS;
-    case 'synth': return SYNTH_WAVEFORMS;
-    default: return ALL_SOUNDS;
-  }
-}
 
 // Get sounds by genre
 export function getSoundsByGenre(genre) {
@@ -110,57 +96,69 @@ export function getSoundsByGenre(genre) {
 
 // Validate if a sound exists
 export function isValidSound(sound) {
-  return sound in ALL_SOUNDS || sound in SYNTH_WAVEFORMS;
+  return sound in ALL_SOUNDS || SYNTH_WAVEFORMS.includes(sound);
 }
 
-// MODERN GENRE MAPPING - Updated with drum banks and confirmed sounds
+// MODERN GENRE MAPPING - Updated with drum banks and confirmed sounds.
+// All GM names below verified against the real GM soundfont source
+// (packages/soundfonts/gm.mjs) - the original data used several names that
+// don't exist (gm_pad_1_new_age, gm_electric_piano_1, gm_acoustic_grand_piano,
+// bare 'subbass'), now corrected to their real equivalents.
 export const GENRE_SOUNDS = {
   house: {
     drums: ['bd', 'sd', 'hh', 'oh', 'cp'],
     drumBank: 'RolandTR909',
     bass: ['gm_synth_bass_1', 'gm_acoustic_bass'],
     leads: ['gm_lead_2_sawtooth', 'triangle'],
-    pads: ['gm_pad_1_new_age', 'square'],
+    pads: ['gm_pad_new_age', 'square'],
     effects: ['space', 'wind']
   },
-  
+
   techno: {
     drums: ['bd', 'sd', 'hh', 'cp', 'perc'],
     drumBank: 'RolandTR909',
     bass: ['gm_synth_bass_2', 'sawtooth'],
     leads: ['gm_lead_1_square', 'gm_lead_2_sawtooth'],
-    pads: ['gm_pad_2_warm', 'triangle'],
+    pads: ['gm_pad_warm', 'triangle'],
     effects: ['metal', 'space']
   },
-  
-  hiphop: {
+
+  hip_hop: {
     drums: ['bd', 'sd', 'hh', 'oh', 'cp'],
     drumBank: 'RolandTR808',
-    bass: ['gm_synth_bass_1', 'subbass'],
+    bass: ['gm_synth_bass_1', 'sine'],
     leads: ['gm_lead_1_square', 'piano'],
-    melodic: ['gm_electric_piano_1', 'jazz'],
+    melodic: ['gm_epiano1', 'jazz'],
     effects: ['numbers', 'crow']
   },
-  
+
   ambient: {
     drums: ['perc', 'click', 'tick'],
     drumBank: 'ViscoSpaceDrum',
     bass: ['gm_acoustic_bass', 'sine'],
-    pads: ['gm_pad_1_new_age', 'gm_pad_2_warm'],
+    pads: ['gm_pad_new_age', 'gm_pad_warm'],
     melodic: ['gm_xylophone', 'wind', 'space'],
     effects: ['insect', 'east']
   },
-  
+
   jazz: {
     drums: ['bd', 'sd', 'hh', 'ride', 'brush'],
     drumBank: 'AkaiLinn',
     bass: ['gm_acoustic_bass', 'gm_electric_bass_finger'],
-    piano: ['gm_acoustic_grand_piano', 'gm_electric_piano_1'],
+    piano: ['gm_piano', 'gm_epiano1'],
     brass: ['gm_trumpet', 'gm_trombone', 'gm_alto_sax'],
     strings: ['gm_string_ensemble_1', 'gm_violin'],
     effects: ['jazz', 'numbers']
   },
-  
+
+  drum_and_bass: {
+    drums: ['bd', 'sd', 'hh', 'cp', 'perc'],
+    drumBank: 'RolandTR909',
+    bass: ['gm_synth_bass_2', 'sawtooth'],
+    leads: ['gm_lead_1_square', 'gm_lead_2_sawtooth'],
+    effects: ['metal', 'space']
+  },
+
   electronic: {
     drums: ['electro', 'tech', 'house', 'bd', 'sd'],
     drumBank: 'RolandTR707',

@@ -61,6 +61,8 @@ OpenRouter's free-model lineup changes over time and popular models can be slow/
 
 ## Example Generations
 
+> **How to run any code snippet in this README (or any file in [`examples/`](examples/)):** paste it into the app's Strudel editor pane or into [strudel.cc](https://strudel.cc/) directly, then press **Ctrl+Enter** (Cmd+Enter on Mac) to evaluate and start playback. That's Strudel's own keyboard shortcut for "run this code" - pasting alone doesn't play it. Generating through this app's UI plays automatically, since it calls the same evaluate step for you.
+
 ### Techno Track
 **Prompt**: "driving hypnotic techno with an acid bassline"
 
@@ -110,7 +112,7 @@ stack(
 ).lpf(sine.slow(16).range(600, 4000))
 ```
 
-More examples generated through this pipeline live in [`examples/`](examples/).
+More examples generated through this pipeline live in [`examples/`](examples/) — regenerate them with `node scripts/generate_examples.mjs`. This calls a real model for each track, so it takes a few minutes to finish (free-tier models in particular can be slow); it's not stuck, just working. LLM output is also non-deterministic — running it again won't reproduce the same code for the same prompt, even with the same model.
 
 ## Project Structure
 
@@ -122,9 +124,10 @@ strudel-openrouter-composer/
 │   ├── openrouter.js        # OpenRouter provider (default)
 │   ├── claude.js            # Claude/Anthropic provider (alternative)
 │   ├── strudel_prompt.js    # Shared system prompt + response cleanup, used by both providers
+│   ├── prompt_context.js    # Detects instruments/genre in a prompt, injects matching real data
 │   ├── sounds.js            # Curated sound library with genre mapping
 │   ├── patterns.js          # Verified pattern templates
-│   ├── synthesis_presets.js # Instrument synthesis presets
+│   ├── synthesis_presets.js # Instrument synthesis presets (real GM sample names)
 │   └── expanded_sounds.js   # Extended drum machine / sample library
 ├── frontend/
 │   ├── index.html         # Modern UI with Strudel REPL integration
@@ -158,6 +161,9 @@ The shared system prompt (`backend/strudel_prompt.js`) teaches the model:
 - **Composition techniques**: layering, sequencing, dynamics, harmony
 
 It also explicitly documents a handful of Strudel syntax traps verified against the real `@strudel/core` source, where an LLM's natural guess is wrong (e.g. assuming camelCase, or that every effect has a parameterized form) — see [CHANGELOG.md](CHANGELOG.md) for the specifics. `postProcessStrudelCode()` in `backend/strudel_prompt.js` also auto-corrects a few of these defensively in case a model still gets them wrong.
+
+### Dynamic instrument/genre-aware generation
+`backend/prompt_context.js` scans each prompt for mentioned instruments (guitar, violin, saxophone, etc.) and genres (house, techno, ambient, jazz, hip-hop, drum & bass), and injects matching real, verified data — an instrument preset's exact working code, a genre's real sound palette, an example pattern — into that specific request's system prompt. A generic prompt that mentions nothing specific gets the plain base prompt, unchanged. Every sample/instrument name this pulls from was individually checked against Strudel's real sample sources and the GM soundfont list — see [CHANGELOG.md](CHANGELOG.md) for why that verification mattered.
 
 ### Visible error reporting
 Strudel's own `evaluate()` swallows pattern runtime errors internally rather than throwing — a broken pattern used to just fail silently with no sound and no explanation. The frontend now listens for the Strudel component's `update` event and shows `event.detail.error` directly in the status bar, so a bad generation is always visible instead of a silent dead end.
