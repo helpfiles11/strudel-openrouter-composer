@@ -65,30 +65,50 @@ OpenRouter's free-model lineup changes over time and popular models can be slow/
 **Prompt**: "epic cyberpunk track with complex modulation"
 
 ```javascript
-// Epic cyberpunk track with modulation
-setcpm(140/4)
+// Epic cyberpunk track - driving and dark, with room to breathe
+setcpm(132/4)
 
 stack(
-  s("bd [~ bd] sd ~").gain(0.9),
-  s("[hh hh] hh [hh hh] hh").gain(0.7).pan(sine.slow(4).range(0.2, 0.8)),
-  note("c2 [~ c2] g2 [~ c2]").sound("sawtooth").lpf(sine.slow(8).range(300, 2000)).gain(0.6),
-  note("e4 [g4 e4] d4 [f4 d4]").sound("square").gain(0.4).room(0.6).delay(0.3),
-  note("c5 g5 e5 d5").sound("sine").gain(0.3).pan(sine.slow(3).range(0.3, 0.7))
-)
+  // Punchy four-on-the-floor with a syncopated snare accent
+  s("bd*4, ~ sd ~ sd").gain(0.9).room(0.1),
+
+  // Restrained hats - texture, not the main event
+  s("hh*8").gain(0.35).hpf(6000).pan(sine.slow(6).range(0.3, 0.7)),
+
+  // Sub bass in A minor, kept low and out of the lead's way
+  note("<a1 a1 e2 g1>").sound("sawtooth").lpf(sine.slow(8).range(150, 500)).gain(0.75),
+
+  // Syncopated mid-range arp - drives the groove without crowding the bass
+  note("<a3 c4 e4 g3> [a3 e4]").sound("square")
+    .lpf(sine.slow(4).range(800, 3000)).gain(0.4).room(0.3).delay(0.2),
+
+  // Sparse high lead - the hook, with space around each note
+  note("<e5 g5 a5 ~>").sound("sine").slow(2).gain(0.3).room(0.5).delay(0.3)
+    .pan(sine.slow(5).range(0.2, 0.8))
+).sometimes(x => x.fast(2))
 ```
 
 ### Ambient Soundscape
 **Prompt**: "atmospheric ambient soundscape with evolving textures"
 
 ```javascript
-// Atmospheric ambient soundscape
+// Atmospheric ambient soundscape - slow, spacious, and gently evolving
 setcpm(60/4)
+
 stack(
-  note("c2 [~ c2] e2 [~ g2]").s("space").gain(0.6).room(0.8),
-  note("g4 a4 [~ c5] e5").s("piano").gain(0.4).delay(0.5),
-  s("[~ hh]*4").gain(0.3).room(0.6),
-  note("c3 ~ e3 ~ g3 ~ a3 ~").sound("sine").gain(0.5).lpf(500)
-)
+  // Deep sub-bass drone, well below everything else
+  note("<c1 ~ g1 ~>").sound("sine").slow(4).gain(0.5).room(0.6),
+
+  // Warm mid pad - the harmonic core, a slowly shifting I-vi-IV-V in C major
+  note("<[c3,e3,g3] [a2,c3,e3] [f2,a2,c3] [g2,b2,d3]>")
+    .sound("space").slow(2).gain(0.45).room(0.85).attack(1.5).release(3),
+
+  // Sparse melodic phrase, high and airy
+  note("g4 ~ a4 [~ c5] ~ e5 ~ ~").s("piano").slow(2).gain(0.35).delay(0.5).room(0.7),
+
+  // Occasional shimmer, barely-there texture
+  s("~ ~ ~ hh").gain(0.15).room(0.8).hpf(4000)
+).lpf(sine.slow(16).range(600, 4000))
 ```
 
 More examples generated through this pipeline live in [`examples/`](examples/).

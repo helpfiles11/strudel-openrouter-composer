@@ -1,68 +1,96 @@
 // Genre: Ambient (provider: openrouter)
 // Prompt: A calm, spacious ambient soundscape for relaxing or focusing, with slow evolving pads, gentle bell-like textures, soft reverb, and no drums, in a warm major key.
 
-// Calm, spacious ambient soundscape — warm C major, no drums
-setcpm(140/4) // ~70 BPM, very slow and breathing
+// Calm Ambient Soundscape in C Major
+// Warm, spacious, no drums - for relaxation & focus
 
-// Slow evolving pad — root and fifth drone with gentle harmonic shifts
-$: note("<c2 c2 g2 c2 f2 f2 c2 g2>@4")
-  .sound("sawtooth")
-  .lpf(sine.slow(16).range(300, 1200))
-  .attack(4).release(8)
+setcpm(60/4) // Slow, spacious tempo
+
+// ===== ROOT PAD: Slow evolving sine/saw blend =====
+$: note("<c2 g1 f1 a1>")
+  .sound("sine")
+  .slow(16)           // 16-cycle chord progression
   .gain(0.35)
-  .room(0.9).roomsize(0.9)
-  .pan(sine.slow(12).range(0.3, 0.7))
-
-// Warm mid pad — chord tones drifting, low gain, soft filter movement
-$: note("<e3 g3 a3 g3 c3 e3 g3 a3>@4")
-  .sound("triangle")
-  .lpf(sine.slow(10).range(500, 1800))
-  .attack(6).release(10)
-  .gain(0.22)
+  .lpf(sine.slow(32).range(200, 800))  // Ultra-slow filter sweep
+  .attack(4)
+  .release(8)
   .room(0.85)
-  .pan(sine.slow(8).range(0.2, 0.8))
+  .delay(0.2)
+  .delaytime(0.5)
+  .delayfeedback(0.4)
 
-// Gentle bell-like textures — sparse, high, sparkling
-$: note("c5 ~ ~ e5 ~ ~ g5 ~ a5 ~ ~ g5 ~ e5 ~ ~")
-  .sound("sine")
-  .attack(0.01).decay(2).sustain(0.1).release(6)
-  .gain(0.18)
-  .room(0.95).roomsize(0.95)
-  .delay(0.45).delaytime(0.75).delayfeedback(0.5)
-  .pan(rand.range(0.15, 0.85))
-  .sometimes(rev)
-
-// Second bell layer — different register, even sparser
-$: note("~ ~ b4 ~ ~ ~ d5 ~ ~ f5 ~ ~ ~ ~ c5 ~")
-  .sound("sine")
-  .attack(0.01).decay(3).sustain(0.05).release(8)
-  .gain(0.14)
-  .room(0.95)
-  .delay(0.5).delaytime(1.25).delayfeedback(0.4)
-  .pan(rand.range(0.1, 0.9))
-
-// Subtle shimmer — very high faint tones for sparkle
-$: note("<c6 e6 g6 c7>@8")
-  .sound("sine")
-  .attack(8).release(12)
-  .gain(0.06)
-  .room(0.9)
-  .hpf(2000)
-  .pan(sine.slow(20).range(0.25, 0.75))
-
-// Slow filter sweep texture — airy movement underneath
-$: note("c3 ~ ~ ~ g3 ~ ~ ~")
+// ===== HARMONIC PAD: Rich sawtooth with voice leading =====
+$: note("<c3 e3 g3 c4> <f3 a3 c4 f4> <g3 b3 d4 g4> <a3 c4 e4 a4>")
   .sound("sawtooth")
-  .lpf(sine.slow(20).range(200, 600))
-  .attack(2).release(6)
-  .gain(0.12)
+  .slow(8)
+  .gain(0.18)
+  .lpf(perlin.slow(16).range(400, 1200))  // Organic filter movement
+  .hpf(100)
+  .attack(3)
+  .release(6)
   .room(0.9)
-  .pan(0.5)
+  .delay(0.15)
+  .delaytime(0.75)
+  .delayfeedback(0.3)
+  .pan(sine.slow(64).range(-0.3, 0.3))   // Imperceptible stereo drift
 
-// Occasional low rumble for warmth and depth
-$: note("<c1 c1 g1 c1>@16")
+// ===== SUB BASS: Felt more than heard =====
+$: note("<c1 f1 g1 a1>")
   .sound("sine")
-  .attack(6).release(10)
-  .gain(0.2)
+  .slow(16)
+  .gain(0.25)
+  .lpf(150)
+  .attack(6)
+  .release(10)
+  .room(0.6)
+
+// ===== BELL TEXTURES: Sparse, gentle, metallic =====
+$: note("<c5 e5 g5> <f5 a5 c6> <g5 b5 d6> <a5 c6 e6>")
+  .sound("gm_xylophone")
+  .slow(32)              // Very sparse - one chord per 32 cycles
+  .degradeBy(0.7)        // Mostly silence, occasional chimes
+  .gain(0.4)
+  .room(0.95)
+  .delay(0.4)
+  .delaytime(0.375)
+  .delayfeedback(0.5)
+  .lpf(3000)
+  .pan(rand.range(-0.6, 0.6))
+
+// ===== HIGH SHIMMER: Triangle wave harmonics =====
+$: note("<c6 g6 c7> <f6 c7 f7> <g6 d7 g7> <a6 e7 a7>")
+  .sound("triangle")
+  .slow(64)
+  .degradeBy(0.85)
+  .gain(0.12)
+  .lpf(sine.slow(128).range(2000, 6000))
+  .hpf(2000)
+  .attack(0.5)
+  .release(12)
+  .room(0.98)
+  .delay(0.5)
+  .delaytime(0.25)
+  .delayfeedback(0.6)
+
+// ===== TEXTURAL WHISPER: Wind-like noise =====
+$: s("~ ~ ~ ~")  // Silent pattern as carrier for noise
+  .sound("wind") // If unavailable, falls back gracefully
+  .gain(0.08)
+  .lpf(perlin.slow(8).range(800, 3000))
+  .hpf(400)
   .room(0.7)
-  .pan(0.5)
+  .pan(sine.slow(32).range(-0.5, 0.5))
+
+// ===== SUBTLE MOVEMENT: Occasional harmonic shifts =====
+$: note("<c4 e4 g4> <f4 a4 c5> <g4 b4 d5> <a4 c5 e5>")
+  .sound("piano")
+  .slow(64)
+  .degradeBy(0.9)      // Very rare notes
+  .gain(0.25)
+  .room(0.9)
+  .delay(0.3)
+  .delaytime(0.5)
+  .delayfeedback(0.4)
+  .lpf(2000)
+  .attack(0.1)
+  .release(8)
