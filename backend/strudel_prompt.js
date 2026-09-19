@@ -80,6 +80,9 @@ export const SYSTEM_PROMPT = `You are an expert Strudel music code generator. Cr
   arithmetic multiply is .mul(), but you rarely need it for simple envelopes/fades: .range()
   alone does the job). Also: .segment(n) takes exactly ONE argument (steps per cycle to quantize
   into) — it is not a way to select a sub-range or a fade window, that's what .range() is for.
+- To apply an overall gain envelope to a whole stack(...) composition, chain .gain(envelope)
+  directly onto the closing stack(...) call — there is no separate .masterGain(); .gain() is the
+  same control already used per-layer, it works identically on a combined pattern.
 
 **ADVANCED PATTERNS:**
 - Euclidean rhythms: s("bd(3,8)") (3 beats in 8 steps)
@@ -304,6 +307,17 @@ export function postProcessStrudelCode(code) {
     const lines = result.split('\n');
     const startsNewPattern = (line) => /^\s*(note|n|s|sound|stack)\(/.test(line);
     const isBlankOrComment = (line) => /^\s*(\/\/.*)?$/.test(line);
+    // A line only counts as "the end of a stack-layer chain" if it's itself
+    // a chain continuation (starts with '.') or a single-line layer (starts
+    // with note(/n(/s(/sound(/stack( itself). This excludes unrelated
+    // top-level statements that merely happen to end in ')' right before
+    // stack( opens - e.g. `const masterGain = sine.range(...).segment(4)`
+    // followed by `stack(` is two separate statements, NOT a missing-comma
+    // layer boundary; treating it as one turns a const declaration into an
+    // invalid multi-declarator statement (found via a real user-pasted track
+    // that hit exactly this false positive from an earlier version of this
+    // fix).
+    const looksLikeChainLine = (line) => /^\s*\./.test(line) || startsNewPattern(line);
     let lastRealLineIdx = -1;
     for (let i = 0; i < lines.length; i++) {
       if (isBlankOrComment(lines[i])) continue;
@@ -314,7 +328,12 @@ export function postProcessStrudelCode(code) {
         const commentMatch = prev.match(/\s+\/\/.*$/);
         const codePart = commentMatch ? prev.slice(0, commentMatch.index) : prev;
         const trimmedCode = codePart.replace(/\s+$/, '');
-        if (/\)\s*$/.test(trimmedCode) && !trimmedCode.endsWith(',') && !trimmedCode.endsWith('(')) {
+        if (
+          looksLikeChainLine(prev) &&
+          /\)\s*$/.test(trimmedCode) &&
+          !trimmedCode.endsWith(',') &&
+          !trimmedCode.endsWith('(')
+        ) {
           const insertAt = trimmedCode.length;
           lines[lastRealLineIdx] = prev.slice(0, insertAt) + ',' + prev.slice(insertAt);
         }
@@ -339,7 +358,13 @@ export function postProcessStrudelCode(code) {
     // .mult() doesn't exist - confirmed against @strudel/core pattern.mjs,
     // the real pattern-arithmetic multiply is .mul() (registered as
     // `mul: [numeralArgs((a, b) => a * b)]`).
-    .replace(/\.mult\(/g, '.mul(');
+    .replace(/\.mult\(/g, '.mul(')
+    // .masterGain() doesn't exist - confirmed against @strudel/core
+    // controls.mjs (no "master" control of any kind is registered there).
+    // .gain() is the real equivalent for applying an overall envelope to a
+    // whole stack(...) composition - it's the same control already used on
+    // every individual layer, just chained onto the combined pattern instead.
+    .replace(/\.masterGain\(/g, '.gain(');
 
   // Balance stack() calls: append any closing parens a truncated response cut off.
   const stackOpenCount = (result.match(/stack\(/g) || []).length;
