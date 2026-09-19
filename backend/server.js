@@ -1,16 +1,10 @@
-// server.js - Main Express server for the Strudel + Claude text-to-music generator
+// server.js - Main Express server for the Strudel + OpenRouter text-to-music generator
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { generateStrudelCode } from './claude.js';
-import { 
-  generateStrudelCode as generateEnhancedCode, 
-  generateWithPatterns, 
-  generateWithSynthesisPresets 
-} from './claude_enhanced.js';
-import { generateAdvancedStrudelCode } from './generator.js';
-import { 
-  COMPREHENSIVE_SOUND_LIBRARY, 
+import { generateStrudelCode, activeProvider } from './provider.js';
+import {
+  COMPREHENSIVE_SOUND_LIBRARY,
   DRUM_MACHINES, 
   VCSL_INSTRUMENTS, 
   MELODIC_SAMPLES, 
@@ -88,71 +82,19 @@ app.post('/api/generate', async (req, res) => {
     }
     
     const strudelCode = await generateStrudelCode(prompt);
+    if (!strudelCode || !strudelCode.trim()) {
+      // Providers can return a technically-successful response with empty
+      // content (e.g. truncated right after an opening code fence) — without
+      // this check that silently "succeeds" with a blank player and no
+      // diagnostic trail at all, which is far worse than a clear error.
+      throw new Error(`Provider (${activeProvider}) returned an empty response — try again, or try a different model/provider`);
+    }
+    console.log(`Generated ${strudelCode.length} chars of Strudel code via ${activeProvider}`);
     res.json({ code: strudelCode });
   } catch (error) {
     console.error('Error generating Strudel code:', error);
     res.status(500).json({ 
       error: 'Failed to generate Strudel code',
-      details: error.message 
-    });
-  }
-});
-
-// Enhanced API endpoint for multi-step generation
-app.post('/api/generate/advanced', async (req, res) => {
-  try {
-    const { prompt } = req.body;
-    
-    if (!prompt) {
-      return res.status(400).json({ error: 'Prompt is required' });
-    }
-    
-    const result = await generateAdvancedStrudelCode(prompt);
-    res.json(result);
-  } catch (error) {
-    console.error('Error in advanced generation:', error);
-    res.status(500).json({ 
-      error: 'Failed to generate advanced Strudel code',
-      details: error.message 
-    });
-  }
-});
-
-// Pattern-assisted generation endpoint
-app.post('/api/generate/patterns', async (req, res) => {
-  try {
-    const { prompt } = req.body;
-    
-    if (!prompt) {
-      return res.status(400).json({ error: 'Prompt is required' });
-    }
-    
-    const strudelCode = await generateWithPatterns(prompt);
-    res.json({ code: strudelCode });
-  } catch (error) {
-    console.error('Error in pattern-assisted generation:', error);
-    res.status(500).json({ 
-      error: 'Failed to generate pattern-assisted code',
-      details: error.message 
-    });
-  }
-});
-
-// Synthesis preset-assisted generation endpoint
-app.post('/api/generate/synthesis', async (req, res) => {
-  try {
-    const { prompt, preset } = req.body;
-    
-    if (!prompt) {
-      return res.status(400).json({ error: 'Prompt is required' });
-    }
-    
-    const strudelCode = await generateWithSynthesisPresets(prompt, preset);
-    res.json({ code: strudelCode });
-  } catch (error) {
-    console.error('Error in synthesis preset-assisted generation:', error);
-    res.status(500).json({ 
-      error: 'Failed to generate synthesis preset-assisted code',
       details: error.message 
     });
   }
@@ -252,53 +194,6 @@ app.get('/api/sounds/random/:genre', (req, res) => {
   }
 });
 
-// Enhanced generation with expanded sound library
-app.post('/api/generate/enhanced', async (req, res) => {
-  try {
-    const { prompt, useRealSamples = true, genre } = req.body;
-    
-    if (!prompt) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Prompt is required' 
-      });
-    }
-    
-    // Enhance prompt with sound library info
-    let enhancedPrompt = prompt;
-    
-    if (useRealSamples && genre) {
-      const genreSounds = getSoundsForGenre(genre);
-      if (genreSounds) {
-        enhancedPrompt += `\n\nUse these real samples for ${genre}:
-- Drums: ${genreSounds.drums.join(', ')}
-- Banks: ${genreSounds.banks.join(', ')}
-- Melodic: ${genreSounds.melodic.join(', ')}
-- Effects: ${genreSounds.effects.join(', ')}
-
-Prefer real samples over synthesis when possible.`;
-      }
-    }
-    
-    const result = await generateWithSynthesisPresets(enhancedPrompt);
-    
-    res.json({
-      success: true,
-      code: result,
-      metadata: {
-        useRealSamples,
-        genre,
-        soundLibrary: 'expanded'
-      }
-    });
-  } catch (error) {
-    console.error('Error in enhanced generation:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to generate enhanced code' 
-    });
-  }
-});
 
 // Sound library endpoint
 app.get('/api/sounds', (req, res) => {
@@ -374,12 +269,6 @@ app.post('/api/validate/sound', (req, res) => {
 // Start server
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
-  console.log('Make sure to:');
-  console.log('1. Set up your .env file with CLAUDE_API_KEY');
-  console.log('2. Run the Strudel development server separately');
-  
-  // Debug logging for environment variables
-  const apiKeyPrefix = process.env.CLAUDE_API_KEY ? process.env.CLAUDE_API_KEY.substring(0, 10) + '...' : 'undefined';
-  console.log(`API Key prefix: ${apiKeyPrefix}`);
-  console.log(`Strudel URL: ${process.env.STRUDEL_URL}`);
+  console.log(`Active provider: ${activeProvider} (set PROVIDER=openrouter|claude in .env to switch)`);
+  console.log(`Strudel URL: ${process.env.STRUDEL_URL || strudelUrl}`);
 });

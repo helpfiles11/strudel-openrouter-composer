@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Strudel + Claude Music Generator</title>
+    <title>Strudel + OpenRouter Composer</title>
     <link rel="stylesheet" href="styles.css">
     <!-- Prism.js for code highlighting -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
@@ -11,15 +11,15 @@
 <body>
     <div class="container">
         <header>
-            <h1>Strudel + Claude: Text-to-Music Generator</h1>
-            <p>Describe the music you want to create, and Claude will generate Strudel code for you.</p>
+            <h1>Strudel + OpenRouter: Text-to-Music Generator</h1>
+            <p>Describe the music you want to create, and an AI model will generate Strudel code for you.</p>
         </header>
 
         <main>
             <div class="input-section">
                 <h2>Your Musical Description</h2>
                 <textarea id="prompt-input" placeholder="Describe the music you want to create... (e.g., 'Create a relaxing ambient piece with piano and soft pads')"></textarea>
-                <button id="generate-btn">Generate Music Code</button>
+                <button id="generate-btn" disabled>Generate Music Code</button>
                 <div class="spinner" id="loading-spinner"></div>
             </div>
 
@@ -28,23 +28,21 @@
                 <div class="player-header">
                     <h2> Strudel Music Player</h2>
                     <div class="player-controls">
-                        <button id="generateBtn2" class="btn btn-primary">Generate</button>
                         <button id="playBtn" class="btn btn-success" disabled>▶ Play</button>
                         <button id="stopBtn" class="btn btn-danger" disabled>⏹ Stop</button>
                         <button id="restartBtn" class="btn btn-warning" disabled>🔄 Restart</button>
-                        <button id="debugBtn" class="btn btn-info">🔍 Debug API</button>
                     </div>
                 </div>
                 
                 <div class="player-content">
                     <div class="player-status">
                         <span class="status-dot"></span>
-                        <span class="status-text">Ready to generate music</span>
+                        <span class="status-text">Loading Strudel player…</span>
                     </div>
                     
                     <!-- Single integrated Strudel player -->
                     <div class="strudel-container">
-                        <strudel-editor id="strudelEditor" show-editor="true" visible="true" theme="light">
+                        <strudel-editor id="strudelEditor" show-editor="true" visible="true" theme="dark">
                             <!-- Initial code will be loaded here -->
                         </strudel-editor>
                     </div>
@@ -53,8 +51,8 @@
         </main>
 
         <footer>
-            <p>Generate music code with Claude AI and play it directly in the embedded Strudel REPL.</p>
-            <p>This project combines <a href="https://strudel.cc/" target="_blank">Strudel</a> with <a href="https://www.anthropic.com/claude" target="_blank">Claude AI</a> to generate music from text descriptions.</p>
+            <p>Generate music code with AI and play it directly in the embedded Strudel REPL.</p>
+            <p>This project combines <a href="https://strudel.cc/" target="_blank">Strudel</a> with <a href="https://openrouter.ai/" target="_blank">OpenRouter</a> (any supported model, including free ones) — Claude also supported, see README.</p>
         </footer>
     </div>
 

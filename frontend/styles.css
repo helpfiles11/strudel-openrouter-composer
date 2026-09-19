@@ -193,7 +193,13 @@ h2 {
 .strudel-container {
   display: block;
   width: 100%;
-  height: 70vh;
+  /* Capped rather than a flat 70vh: on tall viewports 70vh left a lot of
+     empty space above a mostly-idle visualizer canvas; overflow-y still
+     guarantees the code pane scrolls fully into view if it ever needs more
+     room than this box gives it, instead of being cut off at the edge. */
+  height: 60vh;
+  max-height: 550px;
+  overflow-y: auto;
   background: #1a1a1a;
   border: 1px solid #333;
   border-radius: 8px;
@@ -201,23 +207,32 @@ h2 {
   padding: 0;
 }
 
+/* <strudel-editor> inserts its real UI (canvas + CodeMirror) as a sibling
+   <div> immediately after itself (see repl-component.mjs connectedCallback),
+   not as a child — once connected, the <strudel-editor> tag itself is an
+   empty shell. Styling it as a full-height block (as earlier versions of
+   this file did) makes that empty shell render as a large blank box with
+   the real, content-bearing sibling squeezed below it. Target the sibling
+   directly instead. */
 .strudel-container strudel-editor {
-  width: 100%;
-  height: 100%;
-  display: block !important;
-  visibility: visible !important;
-  background: #1e1e1e !important;
-  border: none;
+  display: none;
 }
 
-.strudel-container strudel-editor .cm-editor {
+.strudel-container strudel-editor + div {
+  width: 100%;
+  height: 100%;
+  display: block;
+  background: #1e1e1e;
+}
+
+.strudel-container strudel-editor + div .cm-editor {
   height: 100%;
   background: #1e1e1e !important;
   color: #ffffff !important;
   border: none !important;
 }
 
-.strudel-container strudel-editor .cm-content {
+.strudel-container strudel-editor + div .cm-content {
   padding: 0;
   background: #1e1e1e !important;
   color: #ffffff !important;

@@ -1,31 +1,32 @@
-# Strudel + Claude: AI-Powered Music Composition Tool
+# Strudel + OpenRouter: AI-Powered Music Composition Tool
 
- **Generate sophisticated Strudel music code using natural language with Claude AI**
+**Generate sophisticated Strudel music code using natural language, with any OpenRouter model — including free ones. Claude (Anthropic) is also supported.**
 
-This project creates professional-quality musical compositions by combining the power of Anthropic's Claude AI with Strudel's advanced live coding environment. Simply describe the music you want, and the system generates complex, playable Strudel code with advanced patterns, modulation, and effects.
+We love live coding, algorithmic music, and what the [Strudel](https://strudel.cc/) open source community has built. This project pairs Strudel's live coding environment with an LLM: describe the music you want, and it generates complex, playable Strudel code with layered patterns, modulation, and effects.
+
+> This project is a fork of [etbars/strudel-claude-music-generator](https://github.com/etbars/strudel-claude-music-generator) — thank you to etbars for the original idea and implementation. This fork re-focuses on [OpenRouter](https://openrouter.ai/) as the primary provider so anyone can run it for free, while keeping the original Claude integration available as an option. See [CHANGELOG.md](CHANGELOG.md) for the technical details of what changed.
 
 ## Features
 
-- **Advanced Music Generation**: Creates sophisticated compositions with complex patterns, polyrhythms, and harmonic progressions
-- **Professional Effects**: Automatic application of reverb, delay, filters, and spatial audio
-- **Dynamic Modulation**: Generates evolving textures with sine waves, perlin noise, and complex modulation
-- **Multi-Layered Arrangements**: Combines drums, bass, leads, and atmospheric elements
-- **Genre Intelligence**: Understands different musical styles (house, ambient, jazz, cyberpunk, etc.)
-- **Real-Time Playback**: Integrated Strudel REPL for immediate audio feedback
-- **Copy-Paste Ready**: Generates clean, error-free code that works immediately
+- **Two providers, your choice**: run against any [OpenRouter](https://openrouter.ai/) model (including free-tier ones) or Anthropic's Claude, switchable via a single env var
+- **Advanced music generation**: layered patterns, polyrhythms, and harmonic progressions
+- **Effects**: reverb, delay, filters, and spatial audio
+- **Dynamic modulation**: evolving textures with sine waves, perlin noise, and complex modulation
+- **Multi-layered arrangements**: drums, bass, leads, and atmospheric elements combined via `stack()`
+- **Real-time playback**: integrated Strudel REPL for immediate audio feedback
 
 ## Quick Start
 
 ### Prerequisites
-- Node.js (v14 or higher)
-- Anthropic Claude API key
+- Node.js v18 or higher
+- An [OpenRouter](https://openrouter.ai/keys) API key (free tier available), and/or an [Anthropic](https://console.anthropic.com/) API key
 
 ### Installation
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/strudel-claude-music-generator.git
-   cd strudel-claude-music-generator
+   git clone https://github.com/<your-username>/strudel-openrouter-composer.git
+   cd strudel-openrouter-composer
    ```
 
 2. **Install dependencies**
@@ -36,7 +37,8 @@ This project creates professional-quality musical compositions by combining the 
 3. **Configure environment**
    ```bash
    cp .env.example .env
-   # Edit .env and add your CLAUDE_API_KEY
+   # Edit .env: set PROVIDER=openrouter (default) or PROVIDER=claude,
+   # and fill in the matching API key.
    ```
 
 4. **Start the server**
@@ -48,6 +50,14 @@ This project creates professional-quality musical compositions by combining the 
    ```
    http://localhost:3000
    ```
+
+### Choosing a free OpenRouter model
+
+OpenRouter's free-model lineup changes over time and popular models can be slow/queued. On [openrouter.ai/models](https://openrouter.ai/models):
+1. Filter by **Free**
+2. Sort by **Coding: High to Low** (this task is single-shot code generation, not agentic — skip agentic/domain-specialized models even if they rank well)
+3. Copy the exact model id from that model's **API** tab into `OPENROUTER_MODEL` in `.env` — don't guess the id, model slugs and availability both change
+4. Watch out for **reasoning models**: some free models (e.g. DeepSeek's reasoning variants) spend their entire token budget on an internal chain-of-thought before writing an actual answer, which can come back as an empty response with `finish_reason: "length"`. If that happens, either raise `MAX_TOKENS` in `backend/openrouter.js` well beyond the reasoning overhead, or just pick a different, less deliberative model — the latter is usually more reliable
 
 ## Example Generations
 
@@ -81,21 +91,27 @@ stack(
 )
 ```
 
+More examples generated through this pipeline live in [`examples/`](examples/).
+
 ## Project Structure
 
 ```
-strudel-claude-music-generator/
+strudel-openrouter-composer/
 ├── backend/
-│   ├── server.js           # Express server with API endpoints
-│   ├── claude.js           # Enhanced Claude integration with comprehensive docs
-│   ├── claude_enhanced.js  # Advanced multi-step generation pipeline
-│   ├── generator.js        # Sophisticated composition logic
-│   ├── sounds.js          # Curated sound library with genre mapping
-│   └── patterns.js        # Verified pattern templates
+│   ├── server.js            # Express server with API endpoints
+│   ├── provider.js          # Picks the active AI provider via PROVIDER env var
+│   ├── openrouter.js        # OpenRouter provider (default)
+│   ├── claude.js            # Claude/Anthropic provider (alternative)
+│   ├── strudel_prompt.js    # Shared system prompt + response cleanup, used by both providers
+│   ├── sounds.js            # Curated sound library with genre mapping
+│   ├── patterns.js          # Verified pattern templates
+│   ├── synthesis_presets.js # Instrument synthesis presets
+│   └── expanded_sounds.js   # Extended drum machine / sample library
 ├── frontend/
 │   ├── index.html         # Modern UI with Strudel REPL integration
 │   ├── styles.css         # Clean, responsive styling
 │   └── app.js            # Frontend logic with real-time feedback
+├── examples/              # Sample generated tracks across genres
 ├── .env.example          # Environment configuration template
 ├── package.json          # Dependencies and scripts
 └── README.md            # This file
@@ -103,36 +119,45 @@ strudel-claude-music-generator/
 
 ## API Endpoints
 
-- `POST /api/generate` - Enhanced code generation with comprehensive documentation
-- `POST /api/generate/advanced` - Multi-step generation pipeline
-- `POST /api/generate/patterns` - Pattern-assisted generation
-- `GET /api/sounds` - Available sound library with genre filtering
+- `POST /api/generate` - Generate Strudel code from a natural-language prompt (used by the UI; goes through whichever provider `PROVIDER` selects)
+- `GET /api/sounds` / `GET /api/sounds/expanded` - Sound library, with genre/category filtering
+- `GET /api/drums/machines` - Available drum machines, optionally filtered by genre
+- `GET /api/sounds/random/:genre` - Random sound suggestions for a genre
 - `GET /api/patterns` - Pattern templates for different styles
+- `GET /api/presets` - Synthesis presets by instrument
 - `POST /api/validate/sound` - Sound compatibility validation
 
 ## Advanced Features
 
 ### Comprehensive Strudel Documentation
-The system includes extensive documentation covering:
-- **Mini-notation patterns**: Subdivisions, rests, multiplication, angle brackets
-- **Sound sources**: Drums, melodic samples, oscillators, GM sounds
-- **Effects processing**: Reverb, delay, filters, ADSR, distortion
-- **Pattern transformations**: Speed, reverse, degradation, jux
-- **Modulation**: Sine waves, perlin noise, random values
-- **Composition techniques**: Layering, sequencing, dynamics, harmony
+The shared system prompt (`backend/strudel_prompt.js`) teaches the model:
+- **Mini-notation patterns**: subdivisions, rests, multiplication, angle brackets
+- **Sound sources**: drums, melodic samples, oscillators, GM sounds
+- **Effects processing**: reverb, delay, filters, ADSR, distortion
+- **Pattern transformations**: speed, reverse, degradation, jux
+- **Modulation**: sine waves, perlin noise, random values
+- **Composition techniques**: layering, sequencing, dynamics, harmony
 
-### Musical Intelligence
-- **Genre awareness**: Understands musical styles and applies appropriate sounds/patterns
-- **Harmonic coherence**: Maintains scale consistency and chord progressions
-- **Rhythmic sophistication**: Generates polyrhythms and complex timing
-- **Dynamic arrangement**: Creates evolving compositions with multiple layers
-- **Professional effects**: Applies spatial audio, modulation, and processing
+It also explicitly documents a handful of Strudel syntax traps verified against the real `@strudel/core` source, where an LLM's natural guess is wrong (e.g. assuming camelCase, or that every effect has a parameterized form) — see [CHANGELOG.md](CHANGELOG.md) for the specifics. `postProcessStrudelCode()` in `backend/strudel_prompt.js` also auto-corrects a few of these defensively in case a model still gets them wrong.
+
+### Visible error reporting
+Strudel's own `evaluate()` swallows pattern runtime errors internally rather than throwing — a broken pattern used to just fail silently with no sound and no explanation. The frontend now listens for the Strudel component's `update` event and shows `event.detail.error` directly in the status bar, so a bad generation is always visible instead of a silent dead end.
 
 ## Configuration
 
 ### Environment Variables
 ```bash
+# Provider selection
+PROVIDER=openrouter          # or "claude"
+
+# OpenRouter (default provider)
+OPENROUTER_API_KEY=your_openrouter_api_key_here
+OPENROUTER_MODEL=z-ai/glm-5.2:free
+
+# Claude / Anthropic (alternative provider)
 CLAUDE_API_KEY=your_anthropic_api_key_here
+# CLAUDE_MODEL=claude-sonnet-5
+
 PORT=3000
 STRUDEL_URL=http://localhost:3000
 ```
@@ -147,9 +172,13 @@ The system includes a curated library of confirmed working sounds:
 ## Usage Tips
 
 1. **Be specific**: "Dark techno with rolling bassline" works better than "make music"
-2. **Mention genre**: The system understands house, ambient, jazz, cyberpunk, etc.
-3. **Request complexity**: Ask for "polyrhythms", "modulation", or "multiple layers"
-4. **Copy and test**: Generated code works immediately in any Strudel environment
+2. **Mention genre**: house, ambient, jazz, drum & bass, etc.
+3. **Request complexity**: ask for "polyrhythms", "modulation", or "multiple layers"
+4. **Copy and test**: generated code should work directly in any Strudel environment — if a free OpenRouter model produces broken syntax, try a different `OPENROUTER_MODEL` or switch `PROVIDER=claude`
+
+## About this fork
+
+[etbars/strudel-claude-music-generator](https://github.com/etbars/strudel-claude-music-generator) had a great core idea — pairing an LLM with Strudel's live coding environment to turn a text description into real, playable music. This fork keeps that spirit and adds OpenRouter support so anyone can try it without needing paid API credits, along with a round of testing and bug fixes that came out of actually running the app end-to-end. See [CHANGELOG.md](CHANGELOG.md) for the full technical rundown.
 
 ## Contributing
 
@@ -161,14 +190,16 @@ The system includes a curated library of confirmed working sounds:
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the GNU Affero General Public License v3.0 or later (AGPL-3.0-or-later) - see the [LICENSE](LICENSE) file for details. This matches the license of [Strudel](https://codeberg.org/uzu/strudel) itself, which this project depends on.
 
 ## Acknowledgments
 
-- [Strudel](https://strudel.tidalcycles.org/) - The amazing live coding environment
-- [Anthropic Claude](https://www.anthropic.com/) - Powerful AI for music generation
+- [etbars/strudel-claude-music-generator](https://github.com/etbars/strudel-claude-music-generator) - the original project this was forked from
+- [Strudel](https://strudel.cc/) - the live coding environment
+- [OpenRouter](https://openrouter.ai/) - unified access to many LLMs, including free ones
+- [Anthropic Claude](https://www.anthropic.com/) - supported as an alternative provider
 - The live coding and algorithmic music communities
 
 ---
 
-**Ready to create music with AI? Start generating sophisticated compositions now!** 
+**Ready to create music with AI? Start generating sophisticated compositions now!**

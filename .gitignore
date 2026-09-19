@@ -90,3 +90,6 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.temp
+
+# Local working notes (private scratchpad, never public)
+KLADDE.md
