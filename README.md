@@ -25,7 +25,7 @@ We love live coding, algorithmic music, and what the [Strudel](https://strudel.c
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/<your-username>/strudel-openrouter-composer.git
+   git clone https://github.com/helpfiles11/strudel-openrouter-composer.git
    cd strudel-openrouter-composer
    ```
 
