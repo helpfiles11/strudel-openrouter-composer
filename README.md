@@ -70,10 +70,10 @@ setcpm(140/4)
 
 stack(
   s("bd [~ bd] sd ~").gain(0.9),
-  s("[hh hh] hh [hh hh] hh").gain(0.7).pan(sine(1/4).range(0.2, 0.8)),
-  note("c2 [~ c2] g2 [~ c2]").sound("sawtooth").lpf(sine(1/8).range(300, 2000)).gain(0.6),
+  s("[hh hh] hh [hh hh] hh").gain(0.7).pan(sine.slow(4).range(0.2, 0.8)),
+  note("c2 [~ c2] g2 [~ c2]").sound("sawtooth").lpf(sine.slow(8).range(300, 2000)).gain(0.6),
   note("e4 [g4 e4] d4 [f4 d4]").sound("square").gain(0.4).room(0.6).delay(0.3),
-  note("c5 g5 e5 d5").sound("sine").gain(0.3).pan(sine(1/3).range(0.3, 0.7))
+  note("c5 g5 e5 d5").sound("sine").gain(0.3).pan(sine.slow(3).range(0.3, 0.7))
 )
 ```
 

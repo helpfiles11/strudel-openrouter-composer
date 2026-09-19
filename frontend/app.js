@@ -21,6 +21,28 @@ if (restartBtn) restartBtn.addEventListener('click', restartMusic);
 // Initialize Strudel REPL when page loads
 document.addEventListener('DOMContentLoaded', initializeStrudel);
 
+// Single source of truth for whether an evaluate() actually succeeded — see
+// the comment in initializeStrudel() for why this can't be decided from the
+// call site. `pending: true` events are mid-flight (evaluation just started)
+// and may still carry a stale error/pattern from the previous run, so they're
+// ignored; only the settled (`pending: false`) event is trusted.
+function handleStrudelUpdate(e) {
+    if (e.detail?.pending) return;
+
+    if (e.detail?.error) {
+        console.error('Strudel evaluation error:', e.detail.error);
+        updateStatus('error', 'Strudel error: ' + e.detail.error.message);
+        if (playBtn) playBtn.disabled = false;
+        if (stopBtn) stopBtn.disabled = true;
+        if (restartBtn) restartBtn.disabled = true;
+    } else {
+        updateStatus('playing', 'Music is playing!');
+        if (playBtn) playBtn.disabled = true;
+        if (stopBtn) stopBtn.disabled = false;
+        if (restartBtn) restartBtn.disabled = false;
+    }
+}
+
 async function initializeStrudel() {
     try {
         if (document.readyState !== 'complete') {
@@ -56,18 +78,16 @@ async function initializeStrudel() {
         // autoplay, which we don't want to fire before the user interacts.
 
         // The REPL's own evaluate() swallows pattern runtime errors internally
-        // (e.g. calling a control that doesn't exist) rather than rejecting —
-        // our await never sees them. It does dispatch a real 'update' DOM
-        // event with the error on `detail.error` whenever this happens, so
-        // that's the only way to surface these to the user at all.
+        // (e.g. calling a control that doesn't exist) rather than rejecting,
+        // and it dispatches its 'update' DOM event with the error already set
+        // *before* our own `await evaluate()` resolves — so writing our own
+        // "success" status right after that await unconditionally overwrote
+        // the real error. This event is the only reliable source of truth for
+        // whether an evaluation actually succeeded, so all success/error
+        // status text now goes through it exclusively (see handleStrudelUpdate).
         const strudelEditor = document.getElementById('strudelEditor');
         if (strudelEditor) {
-            strudelEditor.addEventListener('update', (e) => {
-                if (e.detail?.error) {
-                    console.error('Strudel evaluation error:', e.detail.error);
-                    updateStatus('error', 'Strudel error: ' + e.detail.error.message);
-                }
-            });
+            strudelEditor.addEventListener('update', handleStrudelUpdate);
         }
 
         if (generateBtn) generateBtn.disabled = false;
@@ -134,13 +154,14 @@ async function loadCodeIntoStrudel(code) {
 
     try {
         strudelEditor.editor.setCode(cleanStrudelCode(code));
+        // Don't set a "success" status here — the 'update' event handler
+        // (handleStrudelUpdate) is the actual source of truth for whether
+        // this succeeded, and setting one here would race it (see comment
+        // in initializeStrudel).
         await strudelEditor.editor.evaluate();
-
-        updateStatus('playing', 'Music loaded and playing');
-        if (playBtn) playBtn.disabled = true;
-        if (stopBtn) stopBtn.disabled = false;
-        if (restartBtn) restartBtn.disabled = false;
     } catch (error) {
+        // This only catches genuine JS exceptions (e.g. setCode() itself
+        // throwing) — Strudel pattern errors don't reach here, see above.
         console.error('Error loading code into Strudel:', error);
         updateStatus('error', 'Failed to load music: ' + error.message);
         throw error;
@@ -160,11 +181,10 @@ async function runInStrudel() {
     }
 
     try {
+        // Status/button state on success or failure is handled by
+        // handleStrudelUpdate via the 'update' event, not here — see comment
+        // in initializeStrudel for why.
         await strudelEditor.editor.evaluate();
-        updateStatus('playing', 'Music is playing!');
-        if (playBtn) playBtn.disabled = true;
-        if (stopBtn) stopBtn.disabled = false;
-        if (restartBtn) restartBtn.disabled = false;
     } catch (error) {
         console.error('Error starting playback:', error);
         updateStatus('error', 'Failed to start playback: ' + error.message);
