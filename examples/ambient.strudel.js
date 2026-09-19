@@ -1,96 +1,111 @@
 // Genre: Ambient (provider: openrouter)
-// Prompt: A calm, spacious ambient soundscape for relaxing or focusing, with slow evolving pads, gentle bell-like textures, soft reverb, and no drums, in a warm major key.
+// Prompt: A calm, spacious ambient soundscape for relaxing or focusing, with slow evolving pads that noticeably shift every 15-20 seconds (not once every few minutes), gentle bell-like textures, soft reverb, and no drums, in a warm major key.
 
-// Calm Ambient Soundscape in C Major
-// Warm, spacious, no drums - for relaxation & focus
+// Calm, spacious ambient soundscape - warm C major
+// Pads evolve every ~16-20 seconds, gentle bell textures, no drums
 
-setcpm(60/4) // Slow, spacious tempo
+setcpm(50/4)
 
-// ===== ROOT PAD: Slow evolving sine/saw blend =====
-$: note("<c2 g1 f1 a1>")
-  .sound("sine")
-  .slow(16)           // 16-cycle chord progression
+// Root key: C major - all layers share this harmonic foundation
+const root = "c2"
+const scale = "C:major"
+
+// ---- LAYER 1: Deep warm pad foundation (slow chord progression, 16-sec cycle) ----
+$: note("<c2 f2 g2 a1>") // C - F - G - Am (slow IV-V-vi movement)
+  .slow(4)                    // 4 cycles per chord = ~19 sec per chord at 50 BPM
+  .sound("gm_pad_warm")
   .gain(0.35)
-  .lpf(sine.slow(32).range(200, 800))  // Ultra-slow filter sweep
-  .attack(4)
-  .release(8)
   .room(0.85)
-  .delay(0.2)
-  .delaytime(0.5)
-  .delayfeedback(0.4)
+  .lpf(sine.range(400, 1200).slow(8))  // Very slow filter sweep (32 cycles = ~2.5 min)
+  .attack(2)
+  .release(4)
+  .sustain(0.7)
 
-// ===== HARMONIC PAD: Rich sawtooth with voice leading =====
-$: note("<c3 e3 g3 c4> <f3 a3 c4 f4> <g3 b3 d4 g4> <a3 c4 e4 a4>")
-  .sound("sawtooth")
-  .slow(8)
-  .gain(0.18)
-  .lpf(perlin.slow(16).range(400, 1200))  // Organic filter movement
-  .hpf(100)
+// ---- LAYER 2: Mid pad with gentle movement (8-sec chord changes) ----
+$: note("<c3 e3 g3> [f3 a3 c4] [g3 d4] [a3 e4]") // Cmaj, Fmaj, Gsus2, Am7
+  .slow(2)                    // 2 cycles per chord = ~10 sec per chord
+  .sound("gm_pad_new_age")
+  .gain(0.25)
+  .room(0.8)
+  .hpf(150)
+  .lpf(sine.range(800, 2500).slow(6))
+  .attack(1.5)
+  .release(3)
+  .pan(sine.slow(12).range(-0.3, 0.3))  // Ultra-slow stereo drift
+
+// ---- LAYER 3: High shimmer pad (ethereal, very slow) ----
+$: note("<c4 e4 g4 c5> [f4 a4 c5] [g4 d5] [a4 e5]")
+  .slow(8)                    // 8 cycles per chord = ~38 sec per chord
+  .sound("sine")
+  .gain(0.15)
+  .room(0.9)
+  .lpf(sine.range(2000, 6000).slow(16))
   .attack(3)
   .release(6)
-  .room(0.9)
-  .delay(0.15)
-  .delaytime(0.75)
-  .delayfeedback(0.3)
-  .pan(sine.slow(64).range(-0.3, 0.3))   // Imperceptible stereo drift
-
-// ===== SUB BASS: Felt more than heard =====
-$: note("<c1 f1 g1 a1>")
-  .sound("sine")
-  .slow(16)
-  .gain(0.25)
-  .lpf(150)
-  .attack(6)
-  .release(10)
-  .room(0.6)
-
-// ===== BELL TEXTURES: Sparse, gentle, metallic =====
-$: note("<c5 e5 g5> <f5 a5 c6> <g5 b5 d6> <a5 c6 e6>")
-  .sound("gm_xylophone")
-  .slow(32)              // Very sparse - one chord per 32 cycles
-  .degradeBy(0.7)        // Mostly silence, occasional chimes
-  .gain(0.4)
-  .room(0.95)
   .delay(0.4)
-  .delaytime(0.375)
-  .delayfeedback(0.5)
-  .lpf(3000)
-  .pan(rand.range(-0.6, 0.6))
-
-// ===== HIGH SHIMMER: Triangle wave harmonics =====
-$: note("<c6 g6 c7> <f6 c7 f7> <g6 d7 g7> <a6 e7 a7>")
-  .sound("triangle")
-  .slow(64)
-  .degradeBy(0.85)
-  .gain(0.12)
-  .lpf(sine.slow(128).range(2000, 6000))
-  .hpf(2000)
-  .attack(0.5)
-  .release(12)
-  .room(0.98)
-  .delay(0.5)
-  .delaytime(0.25)
-  .delayfeedback(0.6)
-
-// ===== TEXTURAL WHISPER: Wind-like noise =====
-$: s("~ ~ ~ ~")  // Silent pattern as carrier for noise
-  .sound("wind") // If unavailable, falls back gracefully
-  .gain(0.08)
-  .lpf(perlin.slow(8).range(800, 3000))
-  .hpf(400)
-  .room(0.7)
-  .pan(sine.slow(32).range(-0.5, 0.5))
-
-// ===== SUBTLE MOVEMENT: Occasional harmonic shifts =====
-$: note("<c4 e4 g4> <f4 a4 c5> <g4 b4 d5> <a4 c5 e5>")
-  .sound("piano")
-  .slow(64)
-  .degradeBy(0.9)      // Very rare notes
-  .gain(0.25)
-  .room(0.9)
-  .delay(0.3)
   .delaytime(0.5)
   .delayfeedback(0.4)
-  .lpf(2000)
-  .attack(0.1)
+
+// ---- LAYER 4: Gentle bell-like textures (sparse, evolving) ----
+// Using gm_glockenspiel for bell tone, with perlin-controlled timing
+$: note("c5 e5 g5 c6 e6 g6 c7")
+  .slow(16)                   // One note every 16 cycles (~77 sec per full sequence)
+  .sound("gm_glockenspiel")
+  .gain(perlin.range(0.15, 0.35).slow(4))  // Perlin modulates velocity
+  .room(0.7)
+  .lpf(4000)
+  .attack(0.02)
+  .release(3)
+  .delay(0.3)
+  .delaytime(0.375)
+  .delayfeedback(0.25)
+  .degradeBy(0.6)            // Only ~40% of notes trigger - sparse, organic
+
+// ---- LAYER 5: Celesta-like high bells (different rhythm) ----
+$: note("<e5 g5 c6 e6> [a5 c6 e6] [d6 g6] [e6 a6]")
+  .slow(6)                    // Chord change every 6 cycles (~29 sec)
+  .sound("gm_celesta")
+  .gain(perlin.range(0.1, 0.25).slow(5))
+  .room(0.6)
+  .hpf(800)
+  .lpf(5000)
+  .attack(0.01)
+  .release(2.5)
+  .pan(sine.slow(7).range(-0.5, 0.5))
+  .degradeBy(0.7)
+
+// ---- LAYER 6: Subtle atmospheric texture (wind/space-like) ----
+$: s("~ ~ ~ ~")              // Silent pattern as carrier for modulated noise
+  .sound("wind")             // Using wind sample as texture source
+  .gain(sine.range(0.02, 0.08).slow(10))   // Very slow swell (10 cycles = ~48 sec)
+  .room(0.95)
+  .lpf(sine.range(300, 1500).slow(12))
+  .hpf(100)
+  .delay(0.5)
+  .delaytime(0.75)
+  .delayfeedback(0.5)
+
+// ---- LAYER 7: Sub-bass drone (felt more than heard) ----
+$: note("c1")
+  .sound("sine")
+  .gain(0.12)
+  .lpf(80)
+  .room(0.4)
+  .attack(8)
   .release(8)
+  .sustain(0.9)
+
+// ---- LAYER 8: Occasional harmonic sparkle (very sparse) ----
+$: note("c6 e6 g6 c7 e7")
+  .slow(24)                   // Extremely slow - one note every ~2 min
+  .sound("triangle")
+  .gain(rand.range(0.08, 0.18))
+  .room(0.8)
+  .lpf(3000)
+  .attack(0.5)
+  .release(5)
+  .delay(0.25)
+  .delaytime(0.5)
+  .delayfeedback(0.3)
+  .degradeBy(0.85)           // Only ~15% trigger - rare magical moments
+  .pan(rand.range(-0.6, 0.6))
