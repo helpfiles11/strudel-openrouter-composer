@@ -30,7 +30,7 @@ export async function generateStrudelCode(prompt) {
   try {
     const response = await client.messages.create({
       model: CLAUDE_MODEL,
-      max_tokens: 2000,
+      max_tokens: 4000,
       system: buildSystemPrompt(prompt),
       messages: [
         { role: "user", content: `User request: ${prompt}` }

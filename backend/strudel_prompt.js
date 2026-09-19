@@ -193,6 +193,34 @@ note("<[a3 b3] [c3 d3] [e3 f3]>") - each bracketed group plays in its own cycle 
 no "|" needed. Only use "|" for genuine per-cycle randomization, and only inside [...] or at the
 top level, e.g. note("[a3 b3] | [c3 d3]").
 
+**CRITICAL SYNTAX RULE: stack()'s layers are comma-separated function arguments, not
+free-standing statements.** stack(a, b, c) is a single function call - every layer after the
+first MUST be preceded by a comma, even if the previous layer's chain is long, multi-line, and
+followed by a decorative comment block before the next layer starts. It is easy to lose track of
+this when each layer is its own heavily-commented paragraph; the comma still has to be there at
+the very end of the previous layer's chain. Wrong (missing commas - fails immediately, at the
+FIRST layer boundary):
+\`\`\`
+stack(
+  note("<a2 c3 f3>").slow(8).sound("sine").room(0.5)
+
+  // Layer 2
+  note("<a1 f1 c1>").slow(8).sound("sawtooth").lpf(200)
+)
+\`\`\`
+Right:
+\`\`\`
+stack(
+  note("<a2 c3 f3>").slow(8).sound("sine").room(0.5),
+
+  // Layer 2
+  note("<a1 f1 c1>").slow(8).sound("sawtooth").lpf(200)
+)
+\`\`\`
+For a long or many-layered track, keep comments brief (one short line per layer, not decorative
+ASCII boxes) so token budget goes toward correct, complete code rather than running out before
+the composition is finished.
+
 Generate sophisticated Strudel code that showcases the full capabilities of the system!`;
 
 /**
@@ -261,6 +289,40 @@ export function postProcessStrudelCode(code) {
       return fixed === inner ? match : `${fn}(${quote}${fixed}${quote}`;
     }
   );
+
+  // A model can write stack()'s layers one after another without the commas
+  // that separate function arguments - each layer's chain ends in ')', then
+  // (after optional blank/comment-only lines) the next layer starts a fresh
+  // note(/n(/s(/sound(/stack( call, with nothing joining them. Verified via
+  // node --check against a real generated 10-layer track: every one of its
+  // layer boundaries was missing this comma, and inserting it (this exact
+  // heuristic) made the file parse cleanly up to the point of genuine
+  // MAX_TOKENS truncation. Scoped to stack()-style compositions only - a
+  // file using $: (Strudel's multi-statement REPL syntax) deliberately has
+  // NO commas between its top-level patterns, so this must never run there.
+  if (!/\$:/.test(result) && /\bstack\(/.test(result)) {
+    const lines = result.split('\n');
+    const startsNewPattern = (line) => /^\s*(note|n|s|sound|stack)\(/.test(line);
+    const isBlankOrComment = (line) => /^\s*(\/\/.*)?$/.test(line);
+    let lastRealLineIdx = -1;
+    for (let i = 0; i < lines.length; i++) {
+      if (isBlankOrComment(lines[i])) continue;
+      if (startsNewPattern(lines[i]) && lastRealLineIdx !== -1) {
+        const prev = lines[lastRealLineIdx];
+        // Strip a trailing same-line comment before checking whether the
+        // actual code ends in ')' - a comment there would otherwise hide it.
+        const commentMatch = prev.match(/\s+\/\/.*$/);
+        const codePart = commentMatch ? prev.slice(0, commentMatch.index) : prev;
+        const trimmedCode = codePart.replace(/\s+$/, '');
+        if (/\)\s*$/.test(trimmedCode) && !trimmedCode.endsWith(',') && !trimmedCode.endsWith('(')) {
+          const insertAt = trimmedCode.length;
+          lines[lastRealLineIdx] = prev.slice(0, insertAt) + ',' + prev.slice(insertAt);
+        }
+      }
+      lastRealLineIdx = i;
+    }
+    result = lines.join('\n');
+  }
 
   // Fix known-incorrect API usage that models occasionally produce. Strudel's
   // control names are mostly lowercase-only (confirmed against @strudel/core

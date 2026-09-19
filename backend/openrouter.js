@@ -32,7 +32,7 @@ const REQUEST_TIMEOUT_MS = 180000;
 // Verbose, heavily-commented multi-layer tracks can run well past 3000
 // tokens; too low a budget truncates mid-response, which used to leak a
 // dangling ```javascript fence into the editor (see postProcessStrudelCode).
-const MAX_TOKENS = 4000;
+const MAX_TOKENS = 6000;
 
 /**
  * Generates Strudel code from a natural language prompt using an OpenRouter model.
