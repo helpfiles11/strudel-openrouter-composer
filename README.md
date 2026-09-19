@@ -61,31 +61,30 @@ OpenRouter's free-model lineup changes over time and popular models can be slow/
 
 ## Example Generations
 
-### Cyberpunk Track
-**Prompt**: "epic cyberpunk track with complex modulation"
+### Techno Track
+**Prompt**: "driving hypnotic techno with an acid bassline"
 
 ```javascript
-// Epic cyberpunk track - driving and dark, with room to breathe
-setcpm(132/4)
+// Driving techno - hypnotic, dark, and built for the dancefloor
+setcpm(135/4)
 
 stack(
-  // Punchy four-on-the-floor with a syncopated snare accent
-  s("bd*4, ~ sd ~ sd").gain(0.9).room(0.1),
+  // Relentless four-on-the-floor kick - the backbone, never touched
+  s("bd*4").bank("RolandTR909").gain(0.95),
 
-  // Restrained hats - texture, not the main event
-  s("hh*8").gain(0.35).hpf(6000).pan(sine.slow(6).range(0.3, 0.7)),
+  // Backbeat clap and the classic techno "chick" - closed hats with offbeat opens
+  s("~ cp ~ cp").bank("RolandTR909").gain(0.6).room(0.2),
+  s("hh*8").bank("RolandTR909").gain(0.35).hpf(7000).sometimes(x => x.degradeBy(0.2)),
+  s("~ oh ~ oh").bank("RolandTR909").gain(0.3).hpf(6000),
 
-  // Sub bass in A minor, kept low and out of the lead's way
-  note("<a1 a1 e2 g1>").sound("sawtooth").lpf(sine.slow(8).range(150, 500)).gain(0.75),
+  // Acid bassline in C dorian - the resonant filter sweep does the real work
+  note("c2 c2 eb2 c2 g1 c2 bb1 c2").sound("sawtooth")
+    .lpf(perlin.slow(4).range(300, 2000)).lpq(12).distort(0.2).gain(0.8),
 
-  // Syncopated mid-range arp - drives the groove without crowding the bass
-  note("<a3 c4 e4 g3> [a3 e4]").sound("square")
-    .lpf(sine.slow(4).range(800, 3000)).gain(0.4).room(0.3).delay(0.2),
-
-  // Sparse high lead - the hook, with space around each note
-  note("<e5 g5 a5 ~>").sound("sine").slow(2).gain(0.3).room(0.5).delay(0.3)
-    .pan(sine.slow(5).range(0.2, 0.8))
-).sometimes(x => x.fast(2))
+  // Sparse hypnotic stab, one hit per cycle - texture, not a melody
+  note("<c4 eb4 g4 f4>").sound("square").lpf(1500).room(0.3).gain(0.3)
+    .every(8, x => x.fast(2))
+)
 ```
 
 ### Ambient Soundscape
