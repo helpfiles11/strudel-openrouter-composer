@@ -74,6 +74,12 @@ export const SYSTEM_PROMPT = `You are an expert Strudel music code generator. Cr
 - Perlin noise: perlin.range(0.5, 1)
 - Saw waves: saw.range(0, 1)
 - Random: rand.range(0, 1)
+- To scale/rescale a signal to a specific min/max, use .range(min, max) directly — that IS the
+  scaling operation, e.g. sine.slow(30).range(0, 0.6) for a slow fade up to a max gain of 0.6.
+  Do NOT invent a separate multiply step for this (there is no .mult() — the real pattern-
+  arithmetic multiply is .mul(), but you rarely need it for simple envelopes/fades: .range()
+  alone does the job). Also: .segment(n) takes exactly ONE argument (steps per cycle to quantize
+  into) — it is not a way to select a sub-range or a fade window, that's what .range() is for.
 
 **ADVANCED PATTERNS:**
 - Euclidean rhythms: s("bd(3,8)") (3 beats in 8 steps)
@@ -267,7 +273,11 @@ export function postProcessStrudelCode(code) {
     .replace(/\.delayTime\(/g, '.delaytime(')
     // .phase() doesn't exist on signals (sine/saw/etc); .early() is the
     // closest real equivalent for shifting a periodic signal in time.
-    .replace(/\.phase\(/g, '.early(');
+    .replace(/\.phase\(/g, '.early(')
+    // .mult() doesn't exist - confirmed against @strudel/core pattern.mjs,
+    // the real pattern-arithmetic multiply is .mul() (registered as
+    // `mul: [numeralArgs((a, b) => a * b)]`).
+    .replace(/\.mult\(/g, '.mul(');
 
   // Balance stack() calls: append any closing parens a truncated response cut off.
   const stackOpenCount = (result.match(/stack\(/g) || []).length;
