@@ -29,7 +29,10 @@ const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || 'z-ai/glm-5.2:free';
 // to budget for reasoning AND the answer, and we ask the model to keep
 // reasoning effort low (harmless no-op on models that don't support it).
 const REQUEST_TIMEOUT_MS = 180000;
-const MAX_TOKENS = 3000;
+// Verbose, heavily-commented multi-layer tracks can run well past 3000
+// tokens; too low a budget truncates mid-response, which used to leak a
+// dangling ```javascript fence into the editor (see postProcessStrudelCode).
+const MAX_TOKENS = 4000;
 
 /**
  * Generates Strudel code from a natural language prompt using an OpenRouter model.
@@ -103,6 +106,12 @@ export async function generateStrudelCode(prompt) {
         throw new Error('Failed to generate Strudel code: model used its entire token budget on internal reasoning and never wrote an answer — raise MAX_TOKENS in backend/openrouter.js or switch to a less reasoning-heavy OPENROUTER_MODEL');
       }
       throw new Error('Failed to generate Strudel code: OpenRouter response had no message content');
+    }
+    if (choice.finish_reason === 'length') {
+      // Not fatal — postProcessStrudelCode() strips a dangling opening fence
+      // if present — but the resulting track is likely cut off mid-pattern.
+      // Worth knowing about rather than discovering only from a broken track.
+      console.warn(`OpenRouter response was truncated at MAX_TOKENS (${MAX_TOKENS}) — generated code may be incomplete`);
     }
 
     return postProcessStrudelCode(text);

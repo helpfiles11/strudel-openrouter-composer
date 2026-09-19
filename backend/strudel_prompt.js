@@ -109,13 +109,21 @@ $: s("bd ~ [sd ~] ~").swing(0.2)
 $: s("~ hh ~ hh").gain(0.5).swing(0.2)
 \`\`\`
 
+**MUSICALITY GUIDELINES (this is what separates good music from a syntactically-valid mess):**
+- **One key/scale for the whole track.** Pick a single key and scale (or a short, deliberate chord progression) and use it for every melodic and bass layer. Never let different layers wander in unrelated scales — that's the single biggest cause of a track sounding random and dissonant rather than composed.
+- **Frequency separation, not a wall of noise.** Give the bass low-end room (lpf it, keep it below ~300-500Hz), keep mid layers (chords, leads) out of the bass's range, and roll off harshness on hats/percussion with a modest hpf/lpf. Don't stack five layers all playing full-range at gain 0.8 — that's mud, not richness. Use gain staging so the beat sits forward and pads/atmosphere sit behind it (lower gain, more room).
+- **Use randomness/degradation sparingly and with purpose.** .degradeBy(), rand, and heavy modulation are seasoning, not the meal — a busy pattern degraded on every layer at once reads as noise, not groove. Keep most layers steady and use degrade/random sparingly on ONE accent layer for texture.
+- **Give it a shape over time, not a static loop.** Real tracks breathe: introduce layers gradually (e.g. drums first, then bass, then lead), use .every()/.sometimes() for occasional variation, and consider a slow filter sweep or gain automation across the cycle so it doesn't sound identical forever. A track that's still exactly the same after 30 seconds feels lifeless even if each individual line is fine.
+- **Rhythm needs a pocket.** Don't put every layer on the same subdivision (e.g. everything at *8) — vary note density between layers (sparse bass, medium chords, busier hats) so there's a rhythmic hierarchy instead of everything competing for the same beat.
+- **Fewer, better layers beats many competing ones.** 3-5 well-balanced layers (drums, bass, one harmonic layer, one melodic/lead layer, maybe one atmospheric layer) usually sounds better than 8 layers all fighting for attention.
+
 **OUTPUT REQUIREMENTS:**
-1. Create musically coherent compositions
+1. Create musically coherent compositions — follow the musicality guidelines above, not just valid syntax
 2. Use appropriate sounds for the requested genre/style
-3. Include multiple layers for richness
+3. Include multiple layers for richness, but keep them balanced (see frequency separation above)
 4. Apply effects tastefully
-5. Consider harmonic and rhythmic relationships
-6. Make patterns that evolve and have interest
+5. Consider harmonic and rhythmic relationships — one key/scale throughout
+6. Make patterns that evolve and have interest over time, not a static loop
 
 **RESPONSE FORMAT (critical):**
 Respond with ONLY a single fenced code block (\`\`\`javascript ... \`\`\`) containing the Strudel code.
@@ -135,7 +143,18 @@ export function postProcessStrudelCode(code) {
   // prose. Extract it; if the model didn't fence it (rare), fall back to the
   // raw trimmed response rather than guessing at prose boundaries line-by-line.
   const codeBlockMatch = code.match(/```(?:javascript|js)?\s*([\s\S]*?)```/);
-  let result = (codeBlockMatch ? codeBlockMatch[1] : code).trim();
+  let result;
+  if (codeBlockMatch) {
+    result = codeBlockMatch[1];
+  } else {
+    // A response can be cut off (hit max_tokens) before the closing fence
+    // ever arrives, in which case the whole raw text — including the leading
+    // ```javascript line — falls through here. Strip a leading opening fence
+    // if present so that stray backticks don't reach the Strudel evaluator
+    // and break as invalid JS ("Unterminated template").
+    result = code.replace(/^```(?:javascript|js)?\s*\n?/, '');
+  }
+  result = result.trim();
 
   // Fix known-incorrect API usage that models occasionally produce. Strudel's
   // control names are mostly lowercase-only (confirmed against @strudel/core
