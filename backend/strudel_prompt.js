@@ -174,6 +174,16 @@ Respond with ONLY a single fenced code block (\`\`\`javascript ... \`\`\`) conta
 Do not write any explanation, preamble, or commentary before or after the code block. If you want to
 explain a choice, put it in a \`//\` comment inside the code.
 
+**CRITICAL SYNTAX RULE: the file's LAST top-level statement must be a pattern expression (a
+\$: line or a bare pattern), never a const/let/function declaration.** Strudel's evaluator
+requires the very last statement in the file to be an expression so it can return its value;
+if the file ends with something like \`const masterFade = sine.slow(256).range(0, 1)\` (a
+helper you defined but never used again), the ENTIRE track fails with "unexpected ast format
+without body expression" even though every individual line is valid JS. If you define a
+const/helper as your last piece of code, either use it in a \$: pattern that comes AFTER it, or
+move it earlier in the file so a real pattern (\$: ... or a bare expression) is the last thing
+in the file.
+
 **CRITICAL SYNTAX RULE: never use backticks to build a note/sample name from JS values with
 \${}.** Strudel parses EVERY backtick string as mini-notation source, the same as a "..." string
 - it is NOT plain JavaScript template evaluation. Something like note(\`\${root}\${oct}\`) does

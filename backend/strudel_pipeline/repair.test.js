@@ -4,6 +4,7 @@ import {
   renameKnownBadMethods,
   collapseMultilinePatternStrings,
   fixPureInterpolationBackticks,
+  ensureTrailingExpression,
   repair,
 } from './repair.js';
 
@@ -38,6 +39,27 @@ test('rewrites a pure-interpolation backtick to plain JS concatenation', () => {
 test('leaves a backtick with real mini-notation text around a hole untouched', () => {
   const input = 's(`bd(${n},8)`)';
   assert.equal(fixPureInterpolationBackticks(input), input);
+});
+
+test('appends a silence expression when the file ends in a non-expression statement', () => {
+  // Strudel's transpiler appends `return <expr>` to the LAST top-level
+  // statement for REPL evaluation - if that statement isn't an
+  // ExpressionStatement (e.g. a trailing const), older transpiler builds
+  // throw "unexpected ast format without body expression" outright (a
+  // real production bug: a track ending in `const masterFade = ...`).
+  const input = 'stack(note("c"))\nconst masterFade = sine.slow(4)';
+  const result = ensureTrailingExpression(input);
+  assert.ok(result.trim().endsWith('silence'));
+});
+
+test('leaves a file that already ends in an expression untouched', () => {
+  const input = 'const x = sine.slow(4)\nstack(note("c"))';
+  assert.equal(ensureTrailingExpression(input), input);
+});
+
+test('leaves unparseable code untouched (validate.js reports the real syntax error)', () => {
+  const input = 'const x = (';
+  assert.equal(ensureTrailingExpression(input), input);
 });
 
 test('repair() applies all three fixes in one pass', () => {

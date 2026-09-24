@@ -1,3 +1,5 @@
+import * as acorn from 'acorn';
+
 // Known-nonexistent method names a model has been observed writing,
 // mapped to their real equivalents. Verified against the real
 // @strudel/core controls.mjs and pattern.mjs source (see
@@ -70,4 +72,31 @@ export function repair(code) {
   result = fixPureInterpolationBackticks(result);
   result = renameKnownBadMethods(result);
   return result;
+}
+
+// Strudel's transpiler appends `return <expr>` to the file's LAST
+// top-level statement so the REPL can evaluate it - that statement must
+// therefore be an ExpressionStatement. If it's something else (a trailing
+// const/let/function declaration - e.g. a model-written "master gain"
+// helper left dangling at the end of the file), older transpiler builds
+// throw "unexpected ast format without body expression" and the whole
+// track fails, even though every individual statement is valid JS.
+// Upstream Strudel later patched this exact case to gracefully fall back
+// to appending a `silence` expression instead of throwing (confirmed
+// against the real transpiler.mjs source); this replicates that same
+// safe fallback here so it works regardless of which transpiler version
+// is actually deployed. Called separately from repair() above, after
+// stack-comma-repair.js, since it needs the code to already parse.
+export function ensureTrailingExpression(code) {
+  let ast;
+  try {
+    ast = acorn.parse(code, { ecmaVersion: 'latest', sourceType: 'module' });
+  } catch {
+    return code; // let validate.js's JS syntax check report the real error
+  }
+  const body = ast.body;
+  if (body.length === 0) return code;
+  const last = body[body.length - 1];
+  if (last.type === 'ExpressionStatement') return code;
+  return `${code}\nsilence`;
 }

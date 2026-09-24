@@ -1,5 +1,5 @@
 import { extractCodeBlock } from './extract.js';
-import { repair } from './repair.js';
+import { repair, ensureTrailingExpression } from './repair.js';
 import { repairStackCommas } from './stack-comma-repair.js';
 import { validate } from './validate.js';
 
@@ -15,9 +15,10 @@ export function processStrudelCode(rawLLMText) {
   const extracted = extractCodeBlock(rawLLMText);
   const repaired = repair(extracted);
   const withCommasFixed = repairStackCommas(repaired);
-  const errors = validate(withCommasFixed);
+  const withTrailingExpression = ensureTrailingExpression(withCommasFixed);
+  const errors = validate(withTrailingExpression);
   if (errors.length > 0) {
     throw new StrudelValidationError(errors);
   }
-  return withCommasFixed;
+  return withTrailingExpression;
 }
