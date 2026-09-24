@@ -101,6 +101,22 @@ function extractClassMethodNames(src, className) {
   return names;
 }
 
+// A fifth registration shape: direct `Pattern.prototype.name = function`
+// assignments OUTSIDE the class body (e.g. .mask(), .maskAll(), .struct(),
+// .structAll(), .reset(), .restart() and their *All variants, .hush(),
+// .tag(), and others scattered through pattern.mjs). Missed by all three
+// extractors above. Found via a real production bug: .mask() (a
+// well-documented, commonly-used method) was flagged as an unknown
+// method - "did you mean .as(...)?" - because this shape was identified
+// early during this rewrite but never actually implemented.
+function extractPrototypeAssignments(src, className) {
+  const names = new Set();
+  const re = new RegExp(`${className}\\.prototype\\.(\\w+)\\s*=\\s*function`, 'g');
+  let m;
+  while ((m = re.exec(src))) names.add(m[1]);
+  return names;
+}
+
 const allNames = new Set();
 for (const file of CORE_FILES) {
   const src = fetchText(BASE_URL + file);
@@ -112,6 +128,7 @@ for (const file of CORE_FILES) {
   );
   extractComposerKeys(src).forEach((n) => allNames.add(n));
   extractClassMethodNames(src, 'Pattern').forEach((n) => allNames.add(n));
+  extractPrototypeAssignments(src, 'Pattern').forEach((n) => allNames.add(n));
 }
 
 const sorted = [...allNames].sort();

@@ -21,3 +21,14 @@ test('excludes the genuinely nonexistent method names this project has hit as re
     assert.ok(!known.has(name), `expected KNOWN_METHODS to NOT include "${name}"`);
   }
 });
+
+test('includes methods defined as direct Pattern.prototype.name = function assignments', () => {
+  // .mask() — a well-documented, commonly-used method — was flagged as
+  // an unknown method ("did you mean .as(...)?") because this
+  // registration shape (outside the class body, e.g. .mask(), .struct(),
+  // .reset(), .restart() and their *All variants) was identified early
+  // in this rewrite's planning but never actually implemented.
+  for (const name of ['mask', 'maskAll', 'struct', 'structAll', 'reset', 'restart', 'hush']) {
+    assert.ok(known.has(name), `expected KNOWN_METHODS to include "${name}"`);
+  }
+});
