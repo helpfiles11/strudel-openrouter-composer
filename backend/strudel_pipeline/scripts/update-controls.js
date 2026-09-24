@@ -11,27 +11,32 @@ import { execFileSync } from 'node:child_process';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const OUTPUT_PATH = path.join(__dirname, '..', 'controls-data.js');
 
-// Curated list of packages/core/*.mjs files confirmed to register
-// chainable Pattern methods via register()/registerControl()/
-// registerMultiControl(), or (pattern.mjs only) to define the COMPOSERS
-// object of pattern-arithmetic methods (.mul(), .add(), etc). Not
-// exhaustive by construction — the controls cross-check this feeds is
-// advisory (near-miss typo detection), not a hard reject of unrecognized
-// names, so an occasional miss here is low-risk. Extend this list if a
-// future false-positive typo warning turns out to name a real method
-// that just isn't registered in one of these files.
+// Curated list of packages/*.mjs files confirmed to register chainable
+// Pattern methods via register()/registerControl()/registerMultiControl(),
+// or (pattern.mjs only) to define the COMPOSERS object of
+// pattern-arithmetic methods (.mul(), .add(), etc). Not exhaustive by
+// construction — the controls cross-check this feeds is advisory
+// (near-miss typo detection), not a hard reject of unrecognized names, so
+// an occasional miss here is low-risk (though it can produce a false-
+// positive typo warning, as .transpose()/.voicings() did before
+// packages/tonal/ was added here — found via the examples/ regression
+// suite in index.test.js). Extend this list if a future false-positive
+// turns out to name a real method that just isn't registered in one of
+// these files.
 const CORE_FILES = [
-  'controls.mjs',
-  'pattern.mjs',
-  'signal.mjs',
-  'euclid.mjs',
-  'impure.mjs',
-  'pick.mjs',
-  'repl.mjs',
-  'cyclist.mjs',
-  'neocyclist.mjs',
+  'core/controls.mjs',
+  'core/pattern.mjs',
+  'core/signal.mjs',
+  'core/euclid.mjs',
+  'core/impure.mjs',
+  'core/pick.mjs',
+  'core/repl.mjs',
+  'core/cyclist.mjs',
+  'core/neocyclist.mjs',
+  'tonal/tonal.mjs',
+  'tonal/voicings.mjs',
 ];
-const BASE_URL = 'https://codeberg.org/uzu/strudel/raw/branch/main/packages/core/';
+const BASE_URL = 'https://codeberg.org/uzu/strudel/raw/branch/main/packages/';
 
 // Uses curl rather than fetch() — see update-grammar.js for why (Node's
 // fetch doesn't honor HTTP_PROXY/HTTPS_PROXY here, and this script is
@@ -70,6 +75,32 @@ function extractComposerKeys(src) {
   return names;
 }
 
+// A fourth registration shape (pattern.mjs's Pattern class): shorthand
+// methods defined directly in the class body, e.g. `cat(...pats) { ... }`
+// — not registered via register()/registerControl() or the COMPOSERS
+// object, so the two extractors above miss them entirely (found via the
+// examples/ regression suite flagging a real .cat() call as an unknown
+// method). Scoped to lines beginning with exactly two spaces then an
+// identifier then "(" — the same style used throughout this class body —
+// and bounded by a closing "}" alone at the start of a line, matching the
+// convention already relied on for extractComposerKeys above (safe here
+// because this file's JSDoc {Type} annotations are always inline within a
+// comment, never a bare "}" alone on its own line).
+function extractClassMethodNames(src, className) {
+  const startMatch = src.match(new RegExp(`export class ${className} \\{\\n`));
+  if (!startMatch) return new Set();
+  const afterStart = src.slice(startMatch.index + startMatch[0].length);
+  const endMatch = afterStart.match(/^\}/m);
+  const classBody = endMatch ? afterStart.slice(0, endMatch.index) : afterStart;
+  const names = new Set();
+  const re = /^ {2}([a-zA-Z_][a-zA-Z0-9_]*)\(/gm;
+  let m;
+  while ((m = re.exec(classBody))) {
+    if (m[1] !== 'constructor') names.add(m[1]);
+  }
+  return names;
+}
+
 const allNames = new Set();
 for (const file of CORE_FILES) {
   const src = fetchText(BASE_URL + file);
@@ -80,6 +111,7 @@ for (const file of CORE_FILES) {
     allNames.add(n),
   );
   extractComposerKeys(src).forEach((n) => allNames.add(n));
+  extractClassMethodNames(src, 'Pattern').forEach((n) => allNames.add(n));
 }
 
 const sorted = [...allNames].sort();
