@@ -3,7 +3,8 @@ import Anthropic from '@anthropic-ai/sdk';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { buildSystemPrompt, postProcessStrudelCode } from './strudel_prompt.js';
+import { buildSystemPrompt } from './strudel_prompt.js';
+import { processStrudelCode } from './strudel_pipeline/index.js';
 
 // Set up __dirname equivalent for ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -44,7 +45,7 @@ export async function generateStrudelCode(prompt) {
       throw new Error('Claude response did not include a text content block');
     }
 
-    return postProcessStrudelCode(textBlock.text);
+    return processStrudelCode(textBlock.text);
   } catch (error) {
     console.error('Error calling Claude API:', error);
     throw new Error(`Failed to generate Strudel code: ${error.message}`);

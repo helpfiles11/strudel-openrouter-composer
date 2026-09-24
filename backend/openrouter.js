@@ -4,7 +4,8 @@
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { buildSystemPrompt, postProcessStrudelCode } from './strudel_prompt.js';
+import { buildSystemPrompt } from './strudel_prompt.js';
+import { processStrudelCode } from './strudel_pipeline/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -31,7 +32,7 @@ const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || 'z-ai/glm-5.2:free';
 const REQUEST_TIMEOUT_MS = 180000;
 // Verbose, heavily-commented multi-layer tracks can run well past 3000
 // tokens; too low a budget truncates mid-response, which used to leak a
-// dangling ```javascript fence into the editor (see postProcessStrudelCode).
+// dangling ```javascript fence into the editor (see strudel_pipeline/extract.js).
 const MAX_TOKENS = 6000;
 
 /**
@@ -108,13 +109,13 @@ export async function generateStrudelCode(prompt) {
       throw new Error('Failed to generate Strudel code: OpenRouter response had no message content');
     }
     if (choice.finish_reason === 'length') {
-      // Not fatal — postProcessStrudelCode() strips a dangling opening fence
+      // Not fatal — extractCodeBlock() strips a dangling opening fence
       // if present — but the resulting track is likely cut off mid-pattern.
       // Worth knowing about rather than discovering only from a broken track.
       console.warn(`OpenRouter response was truncated at MAX_TOKENS (${MAX_TOKENS}) — generated code may be incomplete`);
     }
 
-    return postProcessStrudelCode(text);
+    return processStrudelCode(text);
   } catch (error) {
     if (error.name === 'TimeoutError' || error.name === 'AbortError') {
       throw new Error(`Failed to generate Strudel code: request timed out after ${REQUEST_TIMEOUT_MS / 1000}s (model may be overloaded — try again or change OPENROUTER_MODEL)`);
