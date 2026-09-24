@@ -184,15 +184,30 @@ const/helper as your last piece of code, either use it in a \$: pattern that com
 move it earlier in the file so a real pattern (\$: ... or a bare expression) is the last thing
 in the file.
 
-**CRITICAL SYNTAX RULE: never use backticks to build a note/sample name from JS values with
-\${}.** Strudel parses EVERY backtick string as mini-notation source, the same as a "..." string
-- it is NOT plain JavaScript template evaluation. Something like note(\`\${root}\${oct}\`) does
-NOT concatenate root and oct into a plain string; Strudel tries to parse the literal text
-"\${root}\${oct}" as a pattern and fails. If you need to build a note/sample name out of JS
-values, concatenate them with + into a plain string BEFORE the call, e.g.
-note(root + oct) or const n = root + oct; note(n) - never note(\`\${root}\${oct}\`). Using \${}
-INSIDE real pattern text is fine (e.g. s(\`bd(\${n},8)\`)) because there's literal pattern syntax
-around the hole; a backtick that is nothing but \${...}\${...} holes is always wrong.
+**CRITICAL SYNTAX RULE: NEVER use \${} inside a backtick string, for any reason, even with real
+pattern text around it.** Strudel parses EVERY backtick string as mini-notation source, the same
+as a "..." string - it is NOT plain JavaScript template evaluation, and it does NOT insert a JS
+value at the \${} position the way you'd expect. Both note(\`\${root}\${oct}\`) (pure
+interpolation) AND s(\`bd(\${n},8)\`) (pattern text around the hole) are equally broken - Strudel
+silently keeps only the literal text BEFORE the first \${ and discards everything from there on,
+so s(\`bd(\${n},8)\`) does not become "bd(<n>,8)", it becomes the truncated, invalid pattern
+"bd(" and fails, or in other cases silently produces a truncated/wrong pattern with no error at
+all. If you need to build a note/sample name or pattern out of JS values, use plain + string
+concatenation OUTSIDE of any backtick, e.g. note(root + oct) or s("bd(" + n + ",8)") - never put
+\${} inside backticks anywhere in the file, not even for a variable never passed to a pattern
+function (Strudel checks every backtick and every "..." string in the whole file, not just ones
+you pass to note/s/n/sound).
+
+**CRITICAL SYNTAX RULE: a double-quoted string ANYWHERE in the file — even one assigned to a
+variable you never use again — is parsed as mini-notation by Strudel.** This is true regardless
+of whether it's passed to note()/n()/s()/sound(), passed to an unrelated function like .bank(),
+or just sitting in an unused const. Writing const whisperRhythm = "(3,16)" and never referencing
+whisperRhythm again does NOT make that string safe - "(3,16)" alone is invalid mini-notation
+(Euclidean rhythm syntax like (3,16) must follow an atom, e.g. bd(3,16), not stand alone) and
+will crash the ENTIRE track even though the variable is dead code. If a string isn't meant to be
+mini-notation at all, either don't write it as a double-quoted literal containing
+punctuation/characters outside plain words, numbers, and mini-notation syntax, or don't create
+it in the first place if it's unused.
 
 **CRITICAL SYNTAX RULE: never write a multi-line pattern string with " or '.** A mini-notation
 pattern like note("...") or s("...") MUST stay on a single line - a raw line break inside a

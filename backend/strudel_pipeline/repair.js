@@ -1,4 +1,5 @@
 import * as acorn from 'acorn';
+import { walk } from './ast-walk.js';
 
 // Known-nonexistent method names a model has been observed writing,
 // mapped to their real equivalents. Verified against the real
@@ -48,28 +49,73 @@ export function collapseMultilinePatternStrings(code) {
   );
 }
 
-// A backtick template literal that is PURE interpolation — one or more
-// `${expr}` holes with no literal characters anywhere around/between
-// them, e.g. `${root}${oct}` — is a trap: Strudel's transpiler treats
-// every backtick string as mini-notation source text (same mechanism as
-// double-quoted strings), NOT plain JS template evaluation. A model
-// reaching for backticks to concatenate JS values (thinking it's
-// ordinary JS) instead hands the raw `${a}${b}` text to the
-// mini-notation parser, which substitutes each hole's runtime value
-// back into the pattern stream — a string value like "a" comes back
-// with literal quote marks around it, which the grammar can't consume.
-// Genuine mini-notation embedded-expression usage (e.g. `bd(${n},8)`)
-// has real literal pattern text around the hole and is left untouched.
-export function fixPureInterpolationBackticks(code) {
-  return code.replace(/`((?:\$\{[^}]*\})+)`/g, (match, holes) => {
-    const exprs = holes.match(/\$\{([^}]*)\}/g).map((h) => h.slice(2, -1));
-    return `(${exprs.join(' + ')})`;
+// ANY backtick template literal containing `${}` interpolation is unsafe
+// as a mini-notation pattern - not just ones that are pure holes with no
+// surrounding text. Verified directly against the real @strudel/transpiler
+// plugin (plugin-mini.mjs): its backtick handling ALWAYS uses only
+// `quasis[0].value.raw` - the literal text before the FIRST `${` - and
+// silently discards every expression and every quasi after it. So
+// `` `bd(${n},8)` `` does NOT become "bd(<n's value>,8)" as a model
+// (reasonably) expects from ordinary JS template syntax; it becomes the
+// truncated pattern "bd(" (a parse error), and `` `c ${x} e` `` silently
+// becomes just "c " with "${x} e" discarded entirely - a *silent*
+// correctness bug, not even an error. A backtick with NO `${}` at all
+// (pure static text) is unaffected and works correctly.
+// Fix: rewrite the whole template literal as plain JS string
+// concatenation of its quasis and expressions, in source order - exactly
+// the semantics a model intends when reaching for template-literal
+// interpolation in the first place. AST-based (splicing at exact node
+// positions, processed last-to-first so earlier positions don't shift)
+// rather than regex, because a regex can't safely reconstruct arbitrary
+// nested expressions inside `${...}`.
+// Renders a plain string as a SINGLE-quoted JS literal. Deliberately not
+// JSON.stringify() (which always produces double quotes): the pieces this
+// produces get spliced back into the source as real string literals, and
+// Strudel's transpiler treats EVERY double-quoted string as mini-notation
+// source, unconditionally (see validate.js's checkMiniNotation) - so a
+// double-quoted piece like "bd(" would itself get individually re-parsed
+// as its own (invalid) mini-notation pattern. Single-quoted strings are
+// never statically wrapped that way, which is exactly what's needed for
+// a plain JS string fragment.
+function toSingleQuotedLiteral(str) {
+  return `'${str.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\r/g, '\\r').replace(/\n/g, '\\n')}'`;
+}
+
+export function fixBacktickInterpolation(code) {
+  let ast;
+  try {
+    ast = acorn.parse(code, { ecmaVersion: 'latest', sourceType: 'module' });
+  } catch {
+    return code; // let validate.js's JS syntax check report the real error
+  }
+  const replacements = [];
+  walk(ast, (node) => {
+    if (node.type === 'TemplateLiteral' && node.expressions.length > 0) {
+      const pieces = [];
+      node.quasis.forEach((quasi, i) => {
+        if (quasi.value.cooked !== '') pieces.push(toSingleQuotedLiteral(quasi.value.cooked));
+        if (i < node.expressions.length) {
+          const expr = node.expressions[i];
+          pieces.push(`(${code.slice(expr.start, expr.end)})`);
+        }
+      });
+      replacements.push({
+        start: node.start,
+        end: node.end,
+        replacement: pieces.length > 0 ? `(${pieces.join(' + ')})` : "''",
+      });
+    }
   });
+  replacements.sort((a, b) => b.start - a.start);
+  let result = code;
+  for (const { start, end, replacement } of replacements) {
+    result = result.slice(0, start) + replacement + result.slice(end);
+  }
+  return result;
 }
 
 export function repair(code) {
   let result = collapseMultilinePatternStrings(code);
-  result = fixPureInterpolationBackticks(result);
   result = renameKnownBadMethods(result);
   return result;
 }

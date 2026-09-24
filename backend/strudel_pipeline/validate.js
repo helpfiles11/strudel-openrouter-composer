@@ -2,26 +2,9 @@ import { Script } from 'node:vm';
 import * as acorn from 'acorn';
 import * as krill from './krill_parser.mjs';
 import { KNOWN_METHODS } from './controls-data.js';
+import { walk } from './ast-walk.js';
 
 const PATTERN_FUNCTIONS = new Set(['note', 'n', 's', 'sound']);
-
-// Minimal generic AST walker — visits every node reachable from `node`,
-// including array-valued children (e.g. a CallExpression's `arguments`).
-// Avoids adding acorn-walk as a further dependency for what's a ~15-line
-// recursive traversal.
-function walk(node, visit) {
-  if (!node || typeof node !== 'object') return;
-  if (typeof node.type === 'string') visit(node);
-  for (const key in node) {
-    if (key === 'loc' || key === 'range' || key === 'start' || key === 'end') continue;
-    const value = node[key];
-    if (Array.isArray(value)) {
-      value.forEach((child) => walk(child, visit));
-    } else if (value && typeof value === 'object') {
-      walk(value, visit);
-    }
-  }
-}
 
 function checkJsSyntax(code) {
   try {
@@ -30,16 +13,6 @@ function checkJsSyntax(code) {
   } catch (err) {
     return [`JS syntax error: ${err.message}`];
   }
-}
-
-function extractPatternStringLiteral(argNode) {
-  if (argNode.type === 'Literal' && typeof argNode.value === 'string') {
-    return argNode.value;
-  }
-  if (argNode.type === 'TemplateLiteral' && argNode.expressions.length === 0) {
-    return argNode.quasis.map((q) => q.value.cooked).join('');
-  }
-  return null;
 }
 
 function parseAstOrNull(code) {
@@ -52,30 +25,61 @@ function parseAstOrNull(code) {
   }
 }
 
+function checkPatternText(text, line, label, errors) {
+  try {
+    krill.parse(`"${text}"`);
+  } catch (err) {
+    // The compiled grammar (vendored directly from krill.pegjs) throws a
+    // raw peggy SyntaxError with no prefix. Strudel's own runtime wraps
+    // this same raw error as "[mini] parse error at line N: <message>"
+    // (in @strudel/mini's JS layer, which isn't vendored here — only the
+    // grammar is) — match that wording so our errors read identically to
+    // what a user would see from the real REPL.
+    errors.push(`${label} at line ${line}: [mini] parse error: ${err.message}`);
+  }
+}
+
 function checkMiniNotation(ast) {
   const errors = [];
   walk(ast, (node) => {
+    // Strudel's transpiler treats EVERY double-quoted string literal in
+    // the file as mini-notation source, unconditionally — regardless of
+    // whether it's ever passed to note()/n()/s()/sound(), assigned to an
+    // unused const, or passed to an unrelated function. Verified against
+    // the real plugin-mini.mjs source (isStringWithDoubleQuotes: any
+    // Literal node whose raw text starts with '"' gets wrapped). A real
+    // production bug: `const whisperRhythm = "(3,16)"` — an unused
+    // variable! — broke the whole track, because Euclidean syntax needs a
+    // preceding atom and none was there.
+    if (node.type === 'Literal' && typeof node.value === 'string' && node.raw?.[0] === '"') {
+      checkPatternText(node.value, node.loc.start.line, `"${node.value}"`, errors);
+      return;
+    }
+    // Backtick literals get the same unconditional treatment. Only ones
+    // with zero `${}` holes reach here — any with interpolation have
+    // already been rewritten to plain JS concatenation by
+    // repair.js's fixBacktickInterpolation earlier in the pipeline.
+    if (node.type === 'TemplateLiteral' && node.expressions.length === 0) {
+      const text = node.quasis.map((q) => q.value.cooked).join('');
+      checkPatternText(text, node.loc.start.line, `\`${text}\``, errors);
+      return;
+    }
+    // Single-quoted strings are never statically wrapped by the
+    // transpiler — Strudel leaves them as plain JS strings everywhere
+    // else in the file. They only become mini-notation when
+    // note()/n()/s()/sound() reify() them at RUNTIME, so only check them
+    // in that specific position.
     if (
       node.type === 'CallExpression' &&
       node.callee.type === 'Identifier' &&
       PATTERN_FUNCTIONS.has(node.callee.name) &&
-      node.arguments.length > 0
+      node.arguments.length > 0 &&
+      node.arguments[0].type === 'Literal' &&
+      typeof node.arguments[0].value === 'string' &&
+      node.arguments[0].raw?.[0] === "'"
     ) {
-      const patternText = extractPatternStringLiteral(node.arguments[0]);
-      if (patternText === null) return;
-      try {
-        krill.parse(`"${patternText}"`);
-      } catch (err) {
-        // The compiled grammar (vendored directly from krill.pegjs) throws
-        // a raw peggy SyntaxError with no prefix. Strudel's own runtime
-        // wraps this same raw error as "[mini] parse error at line N:
-        // <message>" (in @strudel/mini's JS layer, which isn't vendored
-        // here — only the grammar is) — match that wording so our errors
-        // read identically to what a user would see from the real REPL.
-        errors.push(
-          `${node.callee.name}("${patternText}") at line ${node.loc.start.line}: [mini] parse error: ${err.message}`,
-        );
-      }
+      const arg = node.arguments[0];
+      checkPatternText(arg.value, node.loc.start.line, `${node.callee.name}('${arg.value}')`, errors);
     }
   });
   return errors;

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   renameKnownBadMethods,
   collapseMultilinePatternStrings,
-  fixPureInterpolationBackticks,
+  fixBacktickInterpolation,
   ensureTrailingExpression,
   repair,
 } from './repair.js';
@@ -33,12 +33,26 @@ test('leaves a single-line pattern string untouched', () => {
 
 test('rewrites a pure-interpolation backtick to plain JS concatenation', () => {
   const input = 'note(`${root}${oct}`)';
-  assert.equal(fixPureInterpolationBackticks(input), 'note((root + oct))');
+  assert.equal(fixBacktickInterpolation(input), 'note(((root) + (oct)))');
 });
 
-test('leaves a backtick with real mini-notation text around a hole untouched', () => {
+test('rewrites a backtick with real text around a hole too — the real Strudel transpiler discards everything after the first ${, this is NOT safe usage', () => {
   const input = 's(`bd(${n},8)`)';
-  assert.equal(fixPureInterpolationBackticks(input), input);
+  // Reconstructed literal pieces MUST be single-quoted, not double-quoted:
+  // Strudel treats every double-quoted string as mini-notation source
+  // unconditionally, so a double-quoted piece like "bd(" would itself get
+  // individually (and invalidly) re-parsed as its own pattern.
+  assert.equal(fixBacktickInterpolation(input), "s(('bd(' + (n) + ',8)'))");
+});
+
+test('leaves a backtick with no interpolation at all untouched', () => {
+  const input = 's(`bd sd hh`)';
+  assert.equal(fixBacktickInterpolation(input), input);
+});
+
+test('fixBacktickInterpolation leaves unparseable code untouched (validate.js reports the real syntax error)', () => {
+  const input = 'note(`${';
+  assert.equal(fixBacktickInterpolation(input), input);
 });
 
 test('appends a silence expression when the file ends in a non-expression statement', () => {
@@ -57,15 +71,14 @@ test('leaves a file that already ends in an expression untouched', () => {
   assert.equal(ensureTrailingExpression(input), input);
 });
 
-test('leaves unparseable code untouched (validate.js reports the real syntax error)', () => {
+test('ensureTrailingExpression leaves unparseable code untouched (validate.js reports the real syntax error)', () => {
   const input = 'const x = (';
   assert.equal(ensureTrailingExpression(input), input);
 });
 
-test('repair() applies all three fixes in one pass', () => {
-  const input = 'stack(\n  note("\n  c e g\n").masterGain(g),\n  note(`${root}${oct}`)\n)';
+test('repair() applies the multi-line collapse and method-rename fixes in one pass', () => {
+  const input = 'stack(\n  note("\n  c e g\n").masterGain(g)\n)';
   const result = repair(input);
   assert.ok(!result.includes('\n  c e g\n'));
   assert.ok(result.includes('.gain(g)'));
-  assert.ok(result.includes('(root + oct)'));
 });

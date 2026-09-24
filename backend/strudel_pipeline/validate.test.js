@@ -61,3 +61,35 @@ test('still flags a genuine near-miss even when checking a JS builtin name is no
   assert.equal(errors.length, 1);
   assert.match(errors[0], /did you mean \.slow/);
 });
+
+test('flags an invalid double-quoted string even when it is never passed to note/n/s/sound at all', () => {
+  // Real production bug: Strudel's transpiler treats EVERY double-quoted
+  // string in the file as mini-notation source, unconditionally - even an
+  // UNUSED variable. `const whisperRhythm = "(3,16)"` (Euclidean syntax
+  // needs a preceding atom) broke the whole track even though
+  // whisperRhythm was never referenced anywhere else.
+  const code = 'const whisperRhythm = "(3,16)"\ns("bd sd")';
+  const errors = validate(code);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /parse error/);
+});
+
+test('flags an invalid double-quoted string passed to an unrelated function', () => {
+  const code = 's("bd sd").bank("(bad")';
+  const errors = validate(code);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /parse error/);
+});
+
+test('does not flag an ordinary double-quoted word used as a non-pattern argument (e.g. a bank name)', () => {
+  const code = 's("bd sd").bank("RolandTR909")';
+  assert.deepEqual(validate(code), []);
+});
+
+test('does not flag an invalid-looking single-quoted string that is never passed to note/n/s/sound', () => {
+  // Single-quoted strings are only ever mini-notation-parsed when
+  // note()/n()/s()/sound() reify() them at runtime; elsewhere they stay
+  // plain JS strings forever, regardless of content.
+  const code = "const label = '(this is just a plain JS string)'\ns(\"bd sd\")";
+  assert.deepEqual(validate(code), []);
+});
