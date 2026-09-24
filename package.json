@@ -8,7 +8,7 @@
     "dev": "nodemon backend/server.js",
     "strudel": "cd strudel && pnpm dev",
     "setup": "npm install && git clone https://codeberg.org/uzu/strudel.git && cd strudel && pnpm i",
-    "test": "node --test backend/strudel_pipeline"
+    "test": "node --test backend/strudel_pipeline/*.test.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.54.0",
