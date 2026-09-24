@@ -173,11 +173,22 @@ Respond with ONLY a single fenced code block (\`\`\`javascript ... \`\`\`) conta
 Do not write any explanation, preamble, or commentary before or after the code block. If you want to
 explain a choice, put it in a \`//\` comment inside the code.
 
+**CRITICAL SYNTAX RULE: never use backticks to build a note/sample name from JS values with
+\${}.** Strudel parses EVERY backtick string as mini-notation source, the same as a "..." string
+- it is NOT plain JavaScript template evaluation. Something like note(\`\${root}\${oct}\`) does
+NOT concatenate root and oct into a plain string; Strudel tries to parse the literal text
+"\${root}\${oct}" as a pattern and fails. If you need to build a note/sample name out of JS
+values, concatenate them with + into a plain string BEFORE the call, e.g.
+note(root + oct) or const n = root + oct; note(n) - never note(\`\${root}\${oct}\`). Using \${}
+INSIDE real pattern text is fine (e.g. s(\`bd(\${n},8)\`)) because there's literal pattern syntax
+around the hole; a backtick that is nothing but \${...}\${...} holes is always wrong.
+
 **CRITICAL SYNTAX RULE: never write a multi-line pattern string with " or '.** A mini-notation
 pattern like note("...") or s("...") MUST stay on a single line - a raw line break inside a
 "..." or '...' string is invalid JavaScript and will make the ENTIRE track fail to run, even if
 every other line is correct. If a pattern is long, either keep it on one line (mini-notation
-ignores extra spaces) or use backticks (\`...\`) instead, which do allow line breaks. Example of
+ignores extra spaces) or use backticks (\`...\`) instead FOR STATIC TEXT ONLY (no \${} JS-value
+concatenation - see the rule above), which do allow line breaks. Example of
 what NOT to do:
 \`\`\`
 note("
@@ -365,6 +376,25 @@ export function postProcessStrudelCode(code) {
     // whole stack(...) composition - it's the same control already used on
     // every individual layer, just chained onto the combined pattern instead.
     .replace(/\.masterGain\(/g, '.gain(');
+
+  // A backtick template literal that is PURE interpolation - one or more
+  // `${expr}` holes with no literal characters anywhere around/between them,
+  // e.g. `${root}${oct}` - is a trap: Strudel's transpiler treats every
+  // backtick string as mini-notation source text (same mechanism as
+  // double-quoted strings, confirmed against the tidalcycles/strudel wiki's
+  // Technical Manual), NOT plain JS template evaluation. A model reaching
+  // for backticks to concatenate JS values (thinking it's ordinary JS)
+  // instead hands the raw `${a}${b}` text to the mini-notation parser, which
+  // substitutes each hole's runtime value back into the pattern stream - a
+  // string value like "a" comes back with literal quote marks around it,
+  // which the grammar can't consume ([mini] parse error ... "\"" found).
+  // Genuine mini-notation embedded-expression usage (e.g. `bd(${n},8)`) has
+  // real literal pattern text around the hole and is left untouched - only
+  // the zero-literal-text case is unambiguous enough to safely rewrite here.
+  result = result.replace(/`((?:\$\{[^}]*\})+)`/g, (match, holes) => {
+    const exprs = holes.match(/\$\{([^}]*)\}/g).map((h) => h.slice(2, -1));
+    return `(${exprs.join(' + ')})`;
+  });
 
   // Balance stack() calls: append any closing parens a truncated response cut off.
   const stackOpenCount = (result.match(/stack\(/g) || []).length;
