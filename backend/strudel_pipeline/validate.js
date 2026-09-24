@@ -96,6 +96,29 @@ function levenshtein(a, b) {
   return dp[a.length][b.length];
 }
 
+// Common String/Array/Object/Number/Promise/Function prototype methods a
+// generated track's plain JS helper code can legitimately call on a
+// non-Pattern value (e.g. a helper trimming/formatting a sample name
+// before passing it to note()/s()). There's no static type system here to
+// tell "called on a Pattern" apart from "called on a plain JS value", so
+// checkControlNames() below would otherwise flag any of these that happen
+// to land within edit-distance 2 of an obscure real Strudel control name
+// - e.g. .trim() is genuinely valid JS but is distance 2 from the real
+// control "rdim" (a chord-voicing quality), and got false-flagged as "did
+// you mean .rdim(...)?" in production. Exclude the common ones outright
+// rather than trying to infer the receiver's type.
+const JS_BUILTIN_METHOD_NAMES = new Set([
+  'trim', 'trimStart', 'trimEnd', 'toString', 'valueOf', 'toLowerCase', 'toUpperCase',
+  'slice', 'splice', 'split', 'join', 'concat', 'includes', 'indexOf', 'lastIndexOf',
+  'replace', 'replaceAll', 'repeat', 'padStart', 'padEnd', 'charAt', 'charCodeAt',
+  'codePointAt', 'match', 'matchAll', 'search', 'startsWith', 'endsWith', 'normalize', 'at',
+  'map', 'filter', 'reduce', 'reduceRight', 'forEach', 'find', 'findIndex', 'findLast',
+  'findLastIndex', 'some', 'every', 'sort', 'reverse', 'fill', 'flat', 'flatMap', 'push',
+  'pop', 'shift', 'unshift', 'keys', 'values', 'entries', 'hasOwnProperty', 'isPrototypeOf',
+  'propertyIsEnumerable', 'then', 'catch', 'finally', 'toFixed', 'toPrecision',
+  'toExponential', 'apply', 'call', 'bind',
+]);
+
 function checkControlNames(ast) {
   const errors = [];
   const knownSet = new Set(KNOWN_METHODS);
@@ -106,7 +129,7 @@ function checkControlNames(ast) {
       node.callee.property.type === 'Identifier'
     ) {
       const name = node.callee.property.name;
-      if (knownSet.has(name)) return;
+      if (knownSet.has(name) || JS_BUILTIN_METHOD_NAMES.has(name)) return;
       const closeMatch = KNOWN_METHODS.find((known) => levenshtein(known, name) <= 2);
       if (closeMatch) {
         errors.push(

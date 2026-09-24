@@ -45,3 +45,19 @@ test('does not flag calls to a user-defined helper function', () => {
   const code = 'const shamanDrone = (root, oct) => note(root + oct);\nshamanDrone("a", 1)';
   assert.deepEqual(validate(code), []);
 });
+
+test('does not flag standard JS String.prototype methods, even when they happen to be edit-distance-close to an obscure real Strudel control', () => {
+  // "rdim" is a real registered Strudel control (a chord-voicing quality) -
+  // and "trim" is edit-distance 2 from it, so plain JS String#trim() used
+  // in a helper function was previously false-flagged as "not a real
+  // Strudel method - did you mean .rdim(...)?" (a real production bug).
+  const code = 'const clean = (s) => s.trim().toLowerCase();\nnote(clean("c "))';
+  assert.deepEqual(validate(code), []);
+});
+
+test('still flags a genuine near-miss even when checking a JS builtin name is not the concern', () => {
+  const code = 'note("c")._slow(2)';
+  const errors = validate(code);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /did you mean \.slow/);
+});
